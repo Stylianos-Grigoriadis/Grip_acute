@@ -10,17 +10,19 @@ for i in range(1,6):
     print(i)
 
     # Creation of signals already z transformed and checked for having no zeros
-    desired_sd = 10
-    desired_average = 25
+    desired_sd = 5
+    desired_average = 75
+    perturbation_percentage = 50
+    base_percentage = desired_average
+
     pink_signal = lb.pink_noise_signal_creation_using_FFT_method(100, desired_sd, desired_average)
     white_signal = lb.white_noise_signal_creation_using_FFT_method(100, desired_sd, desired_average)
     sine_signal = lb.sine_wave_signal_creation(100, 10, desired_sd, desired_average)
-    isometric_signal = np.full(100,25)
+    isometric_signal = np.full(100,desired_average)
 
     # Creation of perturbation signal (we use 1 value for pre and 1 value for post perturbation
-    perturbation_percentage = 80
-    base_percentage = 25
-    perturbation_part = np.full(20,perturbation_percentage)
+
+    perturbation_part = np.full(50,perturbation_percentage)
     base_part = np.full(1,base_percentage)
 
     # Merge the signal with the perturbation to create the last signal
@@ -56,10 +58,10 @@ for i in range(1,6):
     sine_signal = pd.DataFrame(sine_signal)
     isometric_signal = pd.DataFrame(isometric_signal)
 
-    # pink_signal.to_excel(f'pink_signal_{i}.xlsx', index=False)
-    # white_signal.to_excel(f'white_signal_{i}.xlsx', index=False)
-    # sine_signal.to_excel(f'sine_signal_{i}.xlsx', index=False)
-    # isometric_signal.to_excel(f'isometric_signal_{i}.xlsx', index=False)
+    # pink_signal.to_excel(f'pink_signal_up_from_75_to_50_sd_5_{i}.xlsx', index=False)
+    # white_signal.to_excel(f'white_signal_up_from_75_to_50_sd_5_{i}.xlsx', index=False)
+    # sine_signal.to_excel(f'sine_signal_up_from_75_to_50_sd_5_{i}.xlsx', index=False)
+    # isometric_signal.to_excel(f'isometric_signal_up_from_75_to_50_sd_5_{i}.xlsx', index=False)
 
 
 

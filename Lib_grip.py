@@ -782,7 +782,7 @@ def pink_noise_signal_creation_using_FFT_method(N, desired_sd, desired_average):
         slope, positive_freqs_log, positive_magnitude_log, intercept, r, p, positive_freqs, positive_magnitude = quality_assessment_of_temporal_structure_FFT_method(
             pink_noise)
 
-        if (round(slope, 2) == -0.5) and (p < 0.05) and (r <= -0.7) and (np.all(pink_noise >= 0)):
+        if (round(slope, 2) == -0.5) and (p < 0.05) and (r <= -0.7) and (np.all(pink_noise >= 0)) and (np.all(pink_noise <= 100)):
             #
             # Figure of Frequincies vs Magnitude
             # plt.figure(figsize=(10,6))
@@ -821,7 +821,7 @@ def white_noise_signal_creation_using_FFT_method(N, desired_sd, desired_average)
         slope, positive_freqs_log, positive_magnitude_log, intercept, r, p, positive_freqs, positive_magnitude = quality_assessment_of_temporal_structure_FFT_method(
             white_noise)
 
-        if (round(np.abs(slope), 2) == 0) and (np.all(white_noise >= 0)):
+        if (round(np.abs(slope), 2) == 0) and (np.all(white_noise >= 0)) and (np.all(white_noise <= 100)):
             #
             # Figure of Frequincies vs Magnitude
             # plt.figure(figsize=(10,6))

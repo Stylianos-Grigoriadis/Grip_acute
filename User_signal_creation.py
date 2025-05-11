@@ -12,7 +12,7 @@ for i in range(1,6):
     # Creation of signals already z transformed and checked for having no zeros
     desired_sd = 5
     desired_average = 75
-    perturbation_percentage = 50
+    perturbation_percentage = 25
     base_percentage = desired_average
 
     pink_signal = lb.pink_noise_signal_creation_using_FFT_method(100, desired_sd, desired_average)

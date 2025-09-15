@@ -643,10 +643,23 @@ def outputs(white, pink, sine):
     sine_total_load = np.trapz(sine, x_axis_sine)
     list_total_load = [white_total_load, pink_total_load, sine_total_load]
 
+    white_dfa = dfa(white)
+    pink_dfa = dfa(pink)
+    sine_dfa = dfa(sine)
+    list_dfa = [white_dfa, pink_dfa, sine_dfa]
+
+    white_SaEn = Ent_Samp(white, 2, 0.2)
+    pink_SaEn = Ent_Samp(pink, 2, 0.2)
+    sine_SaEn = Ent_Samp(sine, 2, 0.2)
+    list_SaEn = [white_SaEn, pink_SaEn, sine_SaEn]
+
     dist = {'Signals': ['White', 'Pink', 'Sine'],
             'Average': list_average,
             'std': list_std,
-            'Total_load': list_total_load}
+            'Total_load': list_total_load,
+            'DFA': list_dfa,
+            'SaEn': list_SaEn
+            }
     df = pd.DataFrame(dist)
     print(df)
 
@@ -849,3 +862,147 @@ def white_noise_signal_creation_using_FFT_method(N, desired_sd, desired_average)
             # print(iterations)
 
     return white_noise
+
+
+def fgn_sim(n=1000, H=0.7):
+    """Create Fractional Gaussian Noise
+     Inputs:
+            n: Number of data points of the time series. Default is 1000 data points.
+            H: Hurst parameter of the time series. Default is 0.7.
+     Outputs:
+            An array of n data points with variability H
+    # =============================================================================
+                                ------ EXAMPLE ------
+
+          - Create time series of 1000 datapoints to have an H of 0.7
+          n = 1000
+          H = 0.7
+          dat = fgn_sim(n, H)
+
+          - If you would like to plot the timeseries:
+          import matplotlib.pyplot as plt
+          plt.plot(dat)
+          plt.title(f"Fractional Gaussian Noise (H = {H})")
+          plt.xlabel("Time")
+          plt.ylabel("Value")
+          plt.show()
+    # =============================================================================
+    """
+
+    # Settings:
+    mean = 0
+    std = 1
+
+    # Generate Sequence:
+    z = np.random.normal(size=2 * n)
+    zr = z[:n]
+    zi = z[n:]
+    zic = -zi
+    zi[0] = 0
+    zr[0] = zr[0] * np.sqrt(2)
+    zi[n - 1] = 0
+    zr[n - 1] = zr[n - 1] * np.sqrt(2)
+    zr = np.concatenate([zr[:n], zr[n - 2::-1]])
+    zi = np.concatenate([zi[:n], zic[n - 2::-1]])
+    z = zr + 1j * zi
+
+    k = np.arange(n)
+    gammak = (np.abs(k - 1) ** (2 * H) - 2 * np.abs(k) ** (2 * H) + np.abs(k + 1) ** (2 * H)) / 2
+    ind = np.concatenate([np.arange(n - 1), [n - 1], np.arange(n - 2, 0, -1)])
+    gammak = gammak[ind]  # Circular shift of gammak to match n
+    gkFGN0 = np.fft.ifft(gammak)
+    gksqrt = np.real(gkFGN0)
+
+    if np.all(gksqrt > 0):
+        gksqrt = np.sqrt(gksqrt)
+        z = z[:len(gksqrt)] * gksqrt
+        z = np.fft.ifft(z)
+        z = 0.5 * (n - 1) ** (-0.5) * z
+        z = np.real(z[:n])
+    else:
+        gksqrt = np.zeros_like(gksqrt)
+        raise ValueError("Re(gk)-vector not positive")
+
+    # Standardize: (z - np.mean(z)) / np.sqrt(np.var(z))
+    ans = std * z + mean
+    return ans
+
+def dfa(data, order=1, k=18, plot=False, sc1=4, sc2=4, ax=None, ax_residual=None):
+    nmin = sc1
+    nmax = len(data) // sc2
+
+    log_min = np.log10(nmin)
+    log_max = np.log10(nmax)
+    log_scales = np.linspace(log_min, log_max, k)
+
+    scales = np.unique(np.round(10 ** log_scales).astype(int))
+
+    # Check if data is a column vector (2D array with one column)
+    if data.shape[0] == 1:
+        # Reshape the data to be a column vector
+        data = data.reshape(-1, 1)
+    else:
+        # Data is already a column vector
+        data = data
+
+    # =============================================================================
+    ##########################   START DFA CALCULATION   ##########################
+    # =============================================================================
+
+    # Step 1: Integrate the data
+    integrated_data = np.cumsum(data - np.mean(data))
+
+    fluctuation = []
+
+    for scale in scales:
+        # Step 2: Divide data into non-overlapping window of size 'scale'
+        chunks = len(data) // scale
+        ms = 0.0
+
+        for i in range(chunks):
+            this_chunk = integrated_data[i * scale:(i + 1) * scale]
+            x = np.arange(len(this_chunk))
+
+            # Step 3: Fit polynomial (default is linear, i.e., order=1)
+            coeffs = np.polyfit(x, this_chunk, order)
+            fit = np.polyval(coeffs, x)
+
+            # Detrend and calculate RMS for the current window
+            ms += np.mean((this_chunk - fit) ** 2)
+
+            # Calculate average RMS for this scale
+        fluctuation.append(np.sqrt(ms / chunks))
+
+        # Perform linear regression
+    alpha, intercept = np.polyfit(np.log2(scales), np.log2(fluctuation), 1)
+
+    # Create a log-log plot to visualize the results
+    if plot:
+        if ax is None:
+            fig, ax = plt.subplots(figsize=(8, 6))
+        ax.loglog(scales, fluctuation, marker='o', markerfacecolor='red', markersize=8,
+                  linestyle='-', color='black', linewidth=1.7, label=f'Data')
+
+        # Create the fitted line
+        fit_line = 2 ** (intercept) * scales ** (alpha)  # since log2(y) = alpha * log2(x) + intercept
+        ax.loglog(scales, fit_line, '-', linewidth=3, ls='--', color='blue', label=f'Fit (alpha = {alpha:.3f})')
+
+        ax.set_xlabel('Scale (log)')
+        ax.set_ylabel('Fluctuation (log)')
+        ax.set_title('esDFA')
+        ax.grid(True)
+        ax.legend()
+
+        if ax_residual is not None:
+            residuals = np.log2(fluctuation) - (alpha * np.log2(scales) + intercept)
+            ax_residual.plot(scales, residuals, 'o-', color='purple', markersize=5)
+            ax_residual.axhline(0, linestyle='--', color='gray')
+            ax_residual.set_xscale('log')
+            ax_residual.set_xlabel('Scale (log)')
+            ax_residual.set_ylabel('Residuals')
+            ax_residual.grid(True)
+        plt.show()
+
+    # Return the scales used, fluctuation functions and the alpha value
+    # return scales, fluctuation, alpha
+    return alpha

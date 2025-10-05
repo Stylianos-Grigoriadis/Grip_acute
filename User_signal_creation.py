@@ -7,68 +7,83 @@ import pandas as pd
 import glob
 import random
 
-
-desired_sd_true_perc = 5 # This corresponds to 5% of MVC
-desired_average_true_perc = 20 # This corresponds to 20% of MVC
-perturbation_percentage_true_perc = 70 # This corresponds to 70% of MVC
-base_percentage_true_perc = desired_average_true_perc
+# Parameters of the % MVC
+desired_sd_MVC_perc = 5 # This corresponds to 5% of MVC
+desired_average_MVC_perc = 20 # This corresponds to 20% of MVC
+perturbation_percentage_MVC_perc = 70 # This corresponds to 70% of MVC
+base_percentage_MVC_perc = desired_average_MVC_perc
 maximum_screen_MVC_percentage = 80
+minimum_screen_MVC_percentage = 0
 
-desired_sd_onscreen = desired_sd_true_perc*100/maximum_screen_MVC_percentage                                # This corresponds to desired_sd_true_perc of MVC
-desired_average_onscreen = desired_average_true_perc*100/maximum_screen_MVC_percentage                      # This corresponds to desired_average_true_perc of MVC
-perturbation_percentage_onscreen = perturbation_percentage_true_perc*100/maximum_screen_MVC_percentage      # This corresponds to perturbation_percentage_true_perc of MVC
+# Parameters of the % screen
+desired_sd_onscreen = desired_sd_MVC_perc*100/maximum_screen_MVC_percentage                                # This corresponds to desired_sd_true_perc of MVC
+desired_average_onscreen = desired_average_MVC_perc*100/maximum_screen_MVC_percentage                      # This corresponds to desired_average_true_perc of MVC
+perturbation_percentage_onscreen = perturbation_percentage_MVC_perc*100/maximum_screen_MVC_percentage      # This corresponds to perturbation_percentage_true_perc of MVC
 base_percentage_onscreen = desired_average_onscreen
+young_trails_seconds = 30
 
-Number_of_values_in_signal = 420 # This corresponds to 3.5 minutes of targets before perturbation
+# Parameters of signals
+num_sets = 7
+time_signal_in_seconds = 30 * num_sets
+percentage_of_time_of_perturbation_relativ_to_signal_time = 0.2
+time_perturbation_in_seconds = time_signal_in_seconds * percentage_of_time_of_perturbation_relativ_to_signal_time
+Number_of_data_points_in_signal_pink = 65 * num_sets
+Number_of_data_points_in_signal_white = 65 * num_sets
+Number_of_data_points_in_signal_sine = 200 * num_sets
+Number_of_data_points_in_signal_isotonic = 200 * num_sets
+Number_of_cycles_in_sine_signal = 14*num_sets
 
-
-perturbation_part = np.full(100, perturbation_percentage_onscreen)
+Number_of_data_points_in_perturbation_pink = int(time_perturbation_in_seconds * Number_of_data_points_in_signal_pink / time_signal_in_seconds)
+Number_of_data_points_in_perturbation_white = int(time_perturbation_in_seconds * Number_of_data_points_in_signal_white / time_signal_in_seconds)
+Number_of_data_points_in_perturbation_sine = int(time_perturbation_in_seconds * Number_of_data_points_in_signal_sine / time_signal_in_seconds)
+Number_of_data_points_in_perturbation_isotonic = int(time_perturbation_in_seconds * Number_of_data_points_in_signal_isotonic / time_signal_in_seconds)
+print(f"The number of data points of perturbation pink and white is {Number_of_data_points_in_perturbation_pink}")
+print(f"The number of data points of perturbation sine is {Number_of_data_points_in_perturbation_sine}")
 base_part = np.full(1, base_percentage_onscreen)
 
 # Pink
-pink_signal = lb.fgn_sim(Number_of_values_in_signal, 0.99)
+pink_signal = lb.fgn_sim(Number_of_data_points_in_signal_pink, 0.99)
 pink_signal = lb.z_transform(pink_signal, desired_sd_onscreen, desired_average_onscreen)
-pink_signal_with_pert = np.concatenate((pink_signal, base_part, perturbation_part), axis=0)
+pink_perturbation_signal = np.full(Number_of_data_points_in_perturbation_pink, perturbation_percentage_onscreen)
+pink_signal_with_pert = np.concatenate((pink_signal, base_part, pink_perturbation_signal), axis=0)
 
 # White
-white_signal = lb.white_noise_signal_creation_using_FFT_method(Number_of_values_in_signal, desired_sd_onscreen, desired_average_onscreen)
+white_signal = lb.white_noise_signal_creation_using_FFT_method(Number_of_data_points_in_signal_white, desired_sd_onscreen, desired_average_onscreen)
 white_signal = lb.z_transform(white_signal, desired_sd_onscreen, desired_average_onscreen)
-white_signal_with_pert = np.concatenate((white_signal, base_part, perturbation_part), axis=0)
+white_perturbation_signal = np.full(Number_of_data_points_in_perturbation_white, perturbation_percentage_onscreen)
+white_signal_with_pert = np.concatenate((white_signal, base_part, white_perturbation_signal), axis=0)
 
 # Sine
-sine_perturbation_part = np.full(1000, perturbation_percentage_onscreen)
-sine_signal = lb.sine_wave_signal_creation(Number_of_values_in_signal*10, 105, desired_sd_onscreen, desired_average_onscreen)
+sine_signal = lb.sine_wave_signal_creation(Number_of_data_points_in_signal_sine, Number_of_cycles_in_sine_signal, desired_sd_onscreen, desired_average_onscreen)
 sine_signal = lb.z_transform(sine_signal, desired_sd_onscreen, desired_average_onscreen)
-sine_signal_with_pert = np.concatenate((sine_signal, base_part, sine_perturbation_part), axis=0)
+sine_perturbation_signal = np.full(Number_of_data_points_in_perturbation_sine, perturbation_percentage_onscreen)
+sine_signal_with_pert = np.concatenate((sine_signal, base_part, sine_perturbation_signal), axis=0)
 
 # Isotonic
-isotonic_signal = np.full(420, desired_average_onscreen)
-isotonic_signal_with_pert = np.concatenate((base_part, isotonic_signal, perturbation_part), axis=0)
+isotonic_signal = np.full(Number_of_data_points_in_signal_isotonic, desired_average_onscreen)
+isotonic_perturbation_signal = np.full(Number_of_data_points_in_perturbation_isotonic, perturbation_percentage_onscreen)
+isotonic_signal_with_pert = np.concatenate((isotonic_signal, base_part, isotonic_perturbation_signal), axis=0)
 
 lb.outputs(white_signal, pink_signal, sine_signal)
 
 # Figure to see the signals
-time = np.linspace(0, len(pink_signal_with_pert)/2, len(pink_signal_with_pert))
-time_sine = np.linspace(0, len(pink_signal_with_pert)/2, len(sine_signal_with_pert))
-print(len(sine_signal_with_pert))
-print(len(pink_signal_with_pert))
-print(len(time))
-print(len(time_sine))
-print(time[:-1])
-print(time_sine[:-1])
+time = np.linspace(0, time_signal_in_seconds + time_perturbation_in_seconds, len(pink_signal_with_pert))
+time_sine = np.linspace(0, time_signal_in_seconds + time_perturbation_in_seconds, len(sine_signal_with_pert))
 
 
-plt.scatter(time[:-1], pink_signal_with_pert[1:], label='Pink', c='pink')
-plt.scatter(time[:-1], white_signal_with_pert[1:], label='White', facecolors='white', edgecolors='black')
-plt.scatter(time_sine[:-1], sine_signal_with_pert[:-1], label='Sine', c='red')
-plt.scatter(time[:-1], isotonic_signal_with_pert[1:], label='Isotonic', c='blue')
+plt.scatter(time, pink_signal_with_pert, label='Pink', c='pink')
+plt.scatter(time, white_signal_with_pert, label='White', facecolors='white', edgecolors='black')
+plt.scatter(time_sine, sine_signal_with_pert, label='Sine', c='red')
+plt.scatter(time_sine, isotonic_signal_with_pert, label='Isotonic', c='blue')
 
-plt.plot(time[:-1], pink_signal_with_pert[1:], lw=0.5, c='pink')
-plt.plot(time[:-1], white_signal_with_pert[1:], lw=0.5, c='black')
-plt.plot(time_sine[:-1], sine_signal_with_pert[:-1], lw=0.5, c='red')
-plt.plot(time[:-1], isotonic_signal_with_pert[1:], lw=0.5, c='blue')
+plt.plot(time, pink_signal_with_pert, lw=0.5, c='pink')
+plt.plot(time, white_signal_with_pert, lw=0.5, c='black')
+plt.plot(time_sine, sine_signal_with_pert, lw=0.5, c='red')
+plt.plot(time_sine, isotonic_signal_with_pert, lw=0.5, c='blue')
 
 plt.ylim(0, 100)
+plt.ylabel("Percentage of the screen (%)")
+plt.xlabel("Time (s)")
 plt.legend()
 plt.show()
 

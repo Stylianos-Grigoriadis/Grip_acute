@@ -25,6 +25,7 @@ young_trails_seconds = 30
 # Parameters of signals
 num_sets = 7
 time_signal_in_seconds = 30 * num_sets
+
 percentage_of_time_of_perturbation_relativ_to_signal_time = 0.2
 time_perturbation_in_seconds = time_signal_in_seconds * percentage_of_time_of_perturbation_relativ_to_signal_time
 Number_of_data_points_in_signal_pink = 65 * num_sets
@@ -86,6 +87,12 @@ plt.ylabel("Percentage of the screen (%)")
 plt.xlabel("Time (s)")
 plt.legend()
 plt.show()
+
+directory_to_save = r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip acute perturbation\Data\Signals\P2'
+lb.create_txt_file(pink_signal_with_pert, f"Pink_average_{desired_average_MVC_perc}_sd_{desired_sd_MVC_perc}_pert_{perturbation_percentage_MVC_perc}_screenmax_{maximum_screen_MVC_percentage}", directory_to_save)
+lb.create_txt_file(white_signal_with_pert, f"White_average_{desired_average_MVC_perc}_sd_{desired_sd_MVC_perc}_pert_{perturbation_percentage_MVC_perc}_screenmax_{maximum_screen_MVC_percentage}", directory_to_save)
+lb.create_txt_file(sine_signal_with_pert, f"Sine_average_{desired_average_MVC_perc}_sd_{desired_sd_MVC_perc}_pert_{perturbation_percentage_MVC_perc}_screenmax_{maximum_screen_MVC_percentage}", directory_to_save)
+lb.create_txt_file(isotonic_signal_with_pert, f"Isotonic_average_{desired_average_MVC_perc}_sd_{desired_sd_MVC_perc}_pert_{perturbation_percentage_MVC_perc}_screenmax_{maximum_screen_MVC_percentage}", directory_to_save)
 
 
 

@@ -800,12 +800,11 @@ def pink_noise_signal_creation_using_FFT_method(N, desired_sd, desired_average):
             # Figure of Frequincies vs Magnitude
             # plt.figure(figsize=(10,6))
             # plt.plot(positive_freqs, positive_magnitude)
-            # plt.title(f'{name}\nFFT of Sine Wave')
             # plt.xlabel('Frequency (Hz)')
             # plt.ylabel('Magnitude')
             # plt.grid()
             # plt.show()
-
+            #
             # plt.figure(figsize=(10, 6))
             # plt.scatter(positive_freqs_log, positive_magnitude_log, label='Log-Log Data', color='blue')
             # plt.plot(positive_freqs_log, slope * positive_freqs_log + intercept,
@@ -1006,7 +1005,7 @@ def dfa(data, order=1, k=18, plot=False, sc1=4, sc2=4, ax=None, ax_residual=None
     # return scales, fluctuation, alpha
     return alpha
 
-def signal_extrapolation(signal, step, plot=False):
+def signal_interpolation(signal, step, plot=False):
 
     signal = np.array(signal)
     x_original = np.linspace(0, len(signal), len(signal))

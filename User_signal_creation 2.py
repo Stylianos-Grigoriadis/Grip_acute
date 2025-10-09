@@ -83,11 +83,22 @@ ax2.set_ylabel("MVC (%)")  # optional label
 
 plt.show()
 
+# training_set = 10
+# directory_to_save = r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip acute perturbation\Data\Signals\P5'
+# lb.create_txt_file(pink_signal, f"Training_{training_set}_Pink_average_{desired_average_MVC_perc}_sd_{desired_sd_MVC_perc}_screenmax_{maximum_screen_MVC_percentage}_interp_{interpolation_factor}", directory_to_save)
+# lb.create_txt_file(white_signal, f"Training_{training_set}_White_average_{desired_average_MVC_perc}_sd_{desired_sd_MVC_perc}_screenmax_{maximum_screen_MVC_percentage}_interp_{interpolation_factor}", directory_to_save)
+# lb.create_txt_file(sine_signal, f"Training_{training_set}_Sine_average_{desired_average_MVC_perc}_sd_{desired_sd_MVC_perc}_screenmax_{maximum_screen_MVC_percentage}_interp_{interpolation_factor}", directory_to_save)
+
+
+
+
+
+
 
 # Pink training signal + perturbation
 Number_of_data_points_in_perturbation_pink = int(time_perturbation_in_seconds * len(pink_signal) / time_signal_in_seconds)
 pink_perturbation_signal = np.full(Number_of_data_points_in_perturbation_pink, perturbation_percentage_onscreen)
-pink_signal_with_perturbation = np.concatenate((pink_signal, pink_perturbation_signal), axis=0)
+pink_signal_with_perturbation = np.concatenate((pink_signal, base_part, pink_perturbation_signal), axis=0)
 
 # White training signal + perturbation
 Number_of_data_points_in_perturbation_white = int(time_perturbation_in_seconds * len(white_signal) / time_signal_in_seconds)
@@ -124,10 +135,10 @@ ax2.set_ylabel("MVC (%)")  # optional label
 
 plt.show()
 
-directory_to_save = r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip acute perturbation\Data\Signals\P4'
-lb.create_txt_file(pink_signal_with_perturbation, f"Pink_average_{desired_average_MVC_perc}_sd_{desired_sd_MVC_perc}_pert_{perturbation_percentage_MVC_perc}_screenmax_{maximum_screen_MVC_percentage}_ext_{interpolation_factor}", directory_to_save)
-lb.create_txt_file(white_signal_with_perturbation, f"White_average_{desired_average_MVC_perc}_sd_{desired_sd_MVC_perc}_pert_{perturbation_percentage_MVC_perc}_screenmax_{maximum_screen_MVC_percentage}_ext_{interpolation_factor}", directory_to_save)
-lb.create_txt_file(sine_signal_with_perturbation, f"Sine_average_{desired_average_MVC_perc}_sd_{desired_sd_MVC_perc}_pert_{perturbation_percentage_MVC_perc}_screenmax_{maximum_screen_MVC_percentage}_ext_{interpolation_factor}", directory_to_save)
+directory_to_save = r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip acute perturbation\Data\Signals\P5'
+lb.create_txt_file(pink_signal_with_perturbation, f"Pink_average_{desired_average_MVC_perc}_sd_{desired_sd_MVC_perc}_pert_{perturbation_percentage_MVC_perc}_screenmax_{maximum_screen_MVC_percentage}_interp_{interpolation_factor}", directory_to_save)
+lb.create_txt_file(white_signal_with_perturbation, f"White_average_{desired_average_MVC_perc}_sd_{desired_sd_MVC_perc}_pert_{perturbation_percentage_MVC_perc}_screenmax_{maximum_screen_MVC_percentage}_interp_{interpolation_factor}", directory_to_save)
+lb.create_txt_file(sine_signal_with_perturbation, f"Sine_average_{desired_average_MVC_perc}_sd_{desired_sd_MVC_perc}_pert_{perturbation_percentage_MVC_perc}_screenmax_{maximum_screen_MVC_percentage}_interp_{interpolation_factor}", directory_to_save)
 
 
 

@@ -136,9 +136,9 @@ ax2.set_ylabel("MVC (%)")  # optional label
 plt.show()
 
 directory_to_save = r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip acute perturbation\Data\Signals\P5'
-lb.create_txt_file(pink_signal_with_perturbation, f"Pink_average_{desired_average_MVC_perc}_sd_{desired_sd_MVC_perc}_pert_{perturbation_percentage_MVC_perc}_screenmax_{maximum_screen_MVC_percentage}_interp_{interpolation_factor}", directory_to_save)
-lb.create_txt_file(white_signal_with_perturbation, f"White_average_{desired_average_MVC_perc}_sd_{desired_sd_MVC_perc}_pert_{perturbation_percentage_MVC_perc}_screenmax_{maximum_screen_MVC_percentage}_interp_{interpolation_factor}", directory_to_save)
-lb.create_txt_file(sine_signal_with_perturbation, f"Sine_average_{desired_average_MVC_perc}_sd_{desired_sd_MVC_perc}_pert_{perturbation_percentage_MVC_perc}_screenmax_{maximum_screen_MVC_percentage}_interp_{interpolation_factor}", directory_to_save)
-
+# lb.create_txt_file(pink_signal_with_perturbation, f"Pink_average_{desired_average_MVC_perc}_sd_{desired_sd_MVC_perc}_pert_{perturbation_percentage_MVC_perc}_screenmax_{maximum_screen_MVC_percentage}_interp_{interpolation_factor}", directory_to_save)
+# lb.create_txt_file(white_signal_with_perturbation, f"White_average_{desired_average_MVC_perc}_sd_{desired_sd_MVC_perc}_pert_{perturbation_percentage_MVC_perc}_screenmax_{maximum_screen_MVC_percentage}_interp_{interpolation_factor}", directory_to_save)
+# lb.create_txt_file(sine_signal_with_perturbation, f"Sine_average_{desired_average_MVC_perc}_sd_{desired_sd_MVC_perc}_pert_{perturbation_percentage_MVC_perc}_screenmax_{maximum_screen_MVC_percentage}_interp_{interpolation_factor}", directory_to_save)
+#
 
 

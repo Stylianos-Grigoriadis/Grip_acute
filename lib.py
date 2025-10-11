@@ -154,6 +154,16 @@ def Butterworth_highpass(fs,fc,var):
     b, a = signal.butter(N=2, Wn=fc, btype='high', fs=fs)
     return signal.filtfilt(b, a, var)
 
+def Butterworth_band(fs,fc,var):
+    """ Parameter:
+            fs:     sampling frequency
+            fc:     last of lower and upper limit
+            var:    data series
+    """
+
+
+    b, a = signal.butter(N=2, Wn=fc, btype='band', fs=fs)
+    return signal.filtfilt(b, a, var)
 
 def Average(lst):
     return sum(lst) / len(lst)

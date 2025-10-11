@@ -16,19 +16,35 @@ name = r'Sine_P_1'
 data, sampling_frequency = lb.artinis_read_file(artinis_directory, name)
 
 
-idx = data.index[data["(Event)"] == "A1 "].to_list()
+idx = data.index[data["Event"] == "A1 "].to_list()
 trial_range_start = idx[0]
 trial_range_stop = trial_range_start + (sampling_frequency * 20)
 print()
 data_trial = data.loc[trial_range_start : trial_range_stop]
-
-brain_signal = lib.Butterworth_highpass(sampling_frequency, 0.05, data_trial['[9322] Rx1 - Tx1,Tx2,Tx3  TSI%'])
 print(data_trial.columns)
-plt.plot(data_trial['Time'], data_trial['[9322] Rx1 - Tx1,Tx2,Tx3  TSI%'], label='Original')
-plt.plot(data_trial['Time'], brain_signal, label='Filtered')
-plt.legend()
-plt.show()
+Rx1_Tx1_O2Hb = data_trial['[9322] Rx1 - Tx1  O2Hb']
+Rx1_Tx2_O2Hb = data_trial['[9322] Rx1 - Tx2  O2Hb']
+Rx1_Tx3_O2Hb = data_trial['[9322] Rx1 - Tx3  O2Hb']
+Rx2_Tx1_O2Hb = data_trial['[9322] Rx2 - Tx1  O2Hb']
+Rx2_Tx2_O2Hb = data_trial['[9322] Rx2 - Tx2  O2Hb']
+Rx2_Tx3_O2Hb = data_trial['[9322] Rx2 - Tx3  O2Hb']
+list_data = [Rx1_Tx1_O2Hb, Rx1_Tx2_O2Hb, Rx1_Tx3_O2Hb, Rx2_Tx1_O2Hb, Rx2_Tx2_O2Hb, Rx2_Tx3_O2Hb]
+list_data_names = ['Rx1_Tx1_O2Hb', 'Rx1_Tx2_O2Hb', 'Rx1_Tx3_O2Hb', 'Rx2_Tx1_O2Hb', 'Rx2_Tx2_O2Hb', 'Rx2_Tx3_O2Hb']
 
-print(f"DFA = {lb.dfa(data_trial['[9322] Rx1 - Tx1,Tx2,Tx3  TSI%'], plot=True)}")
-print(f"SaEn = {lb.Ent_Samp(data_trial['[9322] Rx1 - Tx1,Tx2,Tx3  TSI%'], 2, 0.2)}")
-print(f"Frequencies = {lib.FFT(data_trial['[9322] Rx1 - Tx1,Tx2,Tx3  TSI%'], sampling_frequency)}")
+# Rx1_Tx2_O2Hb_highpass = lib.Butterworth_highpass(sampling_frequency, 0.05, Rx1_Tx2_O2Hb)
+# Rx1_Tx3_O2Hb_highpass = lib.Butterworth_highpass(sampling_frequency, 0.05, Rx1_Tx3_O2Hb)
+# Rx2_Tx1_O2Hb_highpass = lib.Butterworth_highpass(sampling_frequency, 0.05, Rx2_Tx1_O2Hb)
+# Rx2_Tx2_O2Hb_highpass = lib.Butterworth_highpass(sampling_frequency, 0.05, Rx2_Tx2_O2Hb)
+# Rx2_Tx3_O2Hb_highpass = lib.Butterworth_highpass(sampling_frequency, 0.05, Rx2_Tx3_O2Hb)
+for name, data in zip(list_data_names, list_data):
+    filtered = lib.Butterworth_band(sampling_frequency, [0.01, 0.2], data)
+    plt.plot(data_trial['Time'], filtered, label='Filtered')
+    plt.plot(data_trial['Time'], data, label='Original')
+
+    plt.title(name)
+    plt.legend()
+    plt.show()
+
+# print(f"DFA = {lb.dfa(Rx1_Tx2_O2Hb_highpass, plot=True)}")
+# print(f"SaEn = {lb.Ent_Samp(Rx1_Tx2_O2Hb_highpass, 2, 0.2)}")
+# print(f"Frequencies = {lib.FFT(Rx1_Tx2_O2Hb_highpass, sampling_frequency)}")

@@ -13,7 +13,7 @@ from scipy import stats
 import itertools
 from itertools import chain
 from scipy.stats import pearsonr
-
+from scipy.signal import welch
 
 def Ent_Ap(data, dim, r):
     """
@@ -1040,3 +1040,69 @@ def artinis_read_file(directory, name):
     data.insert(1, "Time", time)
 
     return data, sampling_frequency
+
+def fNIR_check_quality(y, fs, plot=True):
+    # y = your HbO signal (1D array)
+    # fs = sampling rate in Hz, e.g. 10 or 50 Hz
+
+
+    # 1) Remove mean (kill 0 Hz/DC)
+    y = y - np.mean(y)
+
+    # 2) Power spectral density (Welch’s method)
+    nperseg = int(fs * 10)
+    f, Pxx = welch(y, fs=fs, nperseg=nperseg)  # 10 s window
+    Pxx_dB = 10 * np.log10(Pxx + 1e-20)  # avoid log(0)
+
+    # 3) Focus on 0.6–1.8 Hz (cardiac band)
+    mask = (f >= 0.6) & (f <= 1.8)
+    f_hr, P_hr = f[mask], Pxx_dB[mask]
+
+    if f_hr.size < 5:  # too few points to fit reliably
+        if plot:
+            plt.figure(figsize=(5, 3))
+            plt.plot(f, Pxx_dB, label='PSD (dB)')
+            plt.axvspan(0.6, 1.8, color='orange', alpha=0.2, label='Cardiac range')
+            plt.xlabel('Frequency (Hz)')
+            plt.ylabel('Power (dB)')
+            plt.title('Insufficient points in 0.6–1.8 Hz band')
+            plt.legend()
+            plt.tight_layout()
+            plt.show()
+        return False, np.nan
+
+    # 4) Fit a Gaussian to the band
+    def gaussian(x, a, x0, sigma, c):
+        return a * np.exp(-(x - x0) ** 2 / (2 * sigma ** 2)) + c
+
+    a0 = np.max(P_hr) - np.min(P_hr)
+    x0 = f_hr[np.argmax(P_hr)]
+    sigma0 = 0.2
+    c0 = np.min(P_hr)
+    try:
+        popt, _ = curve_fit(gaussian, f_hr, P_hr, p0=[a0, x0, sigma0, c0], maxfev=10000)
+
+        a, x0, sigma, c = popt
+        peak_height = a
+        print(c)
+    except Exception:
+        peak_height = np.max(P_hr)  # fallback if fit fails
+
+    # 5) Decide if it’s a good channel (Perdue/Wyser criterion)
+    good = peak_height >= 12
+
+    # 6) Optional plot
+    if plot:
+        plt.figure(figsize=(5, 3))
+        plt.plot(f, Pxx_dB, label='PSD (dB)')
+        plt.axvspan(0.6, 1.8, color='orange', alpha=0.2, label='Cardiac range')
+        plt.axhline(12, color='red', linestyle='--', label='12 dB threshold')
+        plt.xlabel('Frequency (Hz)');
+        plt.ylabel('Power (dB)')
+        plt.title(f'Peak = {peak_height:.1f} dB → {"GOOD" if good else "BAD"} '
+                  f'(win={nperseg / fs:.1f}s)')
+        plt.legend();
+        plt.tight_layout();
+        plt.show()
+
+    return good, peak_height

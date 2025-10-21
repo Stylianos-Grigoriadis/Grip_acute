@@ -1041,7 +1041,7 @@ def artinis_read_file(directory, name):
 
     return data, sampling_frequency
 
-def fNIR_check_quality(y, fs, plot=True):
+def fNIRS_check_quality(y, fs, plot=True):
     # y = your HbO signal (1D array)
     # fs = sampling rate in Hz, e.g. 10 or 50 Hz
 
@@ -1106,3 +1106,101 @@ def fNIR_check_quality(y, fs, plot=True):
         plt.show()
 
     return good, peak_height
+
+def moving_standard_deviation(signal, time_window, fs, plot=False):
+    y = np.array(signal)
+    dy = np.diff(y, prepend=y[0]) * fs
+    w = int(round(time_window * fs))
+
+    if w % 2 == 0:  # make it odd (nicer centering)
+        w += 1
+
+    k = np.ones(w) / w
+    m = np.convolve(dy, k, mode='same')  # moving mean
+    m2 = np.convolve(dy ** 2, k, mode='same')  # moving mean of squares
+    mov_std = np.sqrt(np.maximum(m2 - m ** 2, 0))  # std = sqrt(E[x^2] - (E[x])^2)
+
+    if plot:
+        plt.plot(np.linspace(0,len(mov_std),len(mov_std)),mov_std, label='mov_std')
+        plt.plot(np.linspace(0,len(y),len(y)),y, label='y')
+        plt.plot(np.linspace(0,len(dy),len(dy)),dy, label='dy')
+        plt.legend()
+        plt.show()
+
+    return mov_std, dy, w
+
+def detect_motion_mask_from_movstd(time_window, signal, fs, thresh_z=4, plot=True):
+    mov_std, dy, w = moving_standard_deviation(signal, time_window, fs)
+
+    mov_std = np.array(mov_std)
+
+    med = np.median(mov_std)
+    mad = np.median(np.abs(mov_std - med)) + 1e-12
+
+    z = (mov_std - med) / (1.4826 * mad)
+
+    mask = z > thresh_z
+
+    if plot:
+        t = np.arange(len(signal)) / fs
+        fig, ax1 = plt.subplots(figsize=(9, 4))
+
+        # plot the raw signal (left y-axis)
+        ax1.plot(t, signal, color='blue', label='Signal')
+        ax1.set_xlabel('Time (s)')
+        ax1.set_ylabel('Signal', color='blue')
+        ax1.tick_params(axis='y', labelcolor='blue')
+
+        # plot z-score (right y-axis)
+        ax2 = ax1.twinx()
+        ax2.plot(t, z, color='black', label='z-score')
+        ax2.axhline(thresh_z, color='red', linestyle='--', lw=1)
+        ax2.set_ylabel('Robust z-score', color='black')
+        ax2.tick_params(axis='y', labelcolor='black')
+
+        # mark motion regions
+        for i in range(len(mask)):
+            if mask[i]:
+                ax1.axvspan(t[i], t[i], color='tomato', alpha=0.3)
+
+        plt.title('Motion detection (red = motion)')
+        plt.tight_layout()
+        plt.show()
+
+    return mask, z
+
+def mask_to_segments(mask):
+    segs = []
+    on = False
+    for i, m in enumerate(mask):
+        if m and not on:
+            s = i
+            on = True
+        elif not m and on:
+            segs.append((s, i-1))
+            on = False
+    if on:
+        segs.append((s, len(mask)-1))
+    return segs
+
+def postprocess_segments(segs, n, fs, min_len_sec=0.15, pad_sec=0.20):
+    """Merge, pad, and drop ultra-short detections."""
+    if not segs:
+        return []
+    pad = int(round(pad_sec * fs))
+    for (start, end) in segs:
+        segs = [(max(0, start-pad), min(n-1, end+pad))]
+
+    # merge overlaps
+    segs.sort()
+    merged = [segs[0]]
+    for start, end in segs[1:]:
+        ps, pe = merged[-1]
+        if start <= pe + 1:
+            merged[-1] = (ps, max(pe, end))
+        else:
+            merged.append((start, end))
+    # drop very short
+    min_len = int(round(min_len_sec * fs))
+    merged = [(start, end) for (start, end) in merged if (end - start + 1) >= min_len]
+    return merged

@@ -12,7 +12,7 @@ data_force = pd.read_csv(r'grip_strength_Damianou__Anestis___09Oct25_12_46_52.cs
 
 
 artinis_directory = r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip acute perturbation\Data\Raw Data\Grip assessment 10_9_2025\Artinis'
-name = r'Pink_P_1'
+name = r'White_P_1'
 data, sampling_frequency = lb.artinis_read_file(artinis_directory, name)
 
 
@@ -50,12 +50,22 @@ list_data_names = ['Rx1_Tx1_O2Hb', 'Rx1_Tx2_O2Hb', 'Rx1_Tx3_O2Hb', 'Rx2_Tx1_O2Hb
 # print(f"Frequencies = {lib.FFT(Rx1_Tx2_O2Hb_highpass, sampling_frequency)}")
 
 
-lb.fNIR_check_quality(Rx1_Tx1_O2Hb, 100, plot=True)
-lb.fNIR_check_quality(Rx1_Tx2_O2Hb, 100, plot=True)
-lb.fNIR_check_quality(Rx1_Tx3_O2Hb, 100, plot=True)
-lb.fNIR_check_quality(Rx2_Tx1_O2Hb, 100, plot=True)
-lb.fNIR_check_quality(Rx2_Tx2_O2Hb, 100, plot=True)
-lb.fNIR_check_quality(Rx2_Tx3_O2Hb, 100, plot=True)
+# lb.fNIRS_check_quality(Rx1_Tx1_O2Hb, 100, plot=True)
+# lb.fNIRS_check_quality(Rx1_Tx2_O2Hb, 100, plot=True)
+# lb.fNIRS_check_quality(Rx1_Tx3_O2Hb, 100, plot=True)
+# lb.fNIRS_check_quality(Rx2_Tx1_O2Hb, 100, plot=True)
+# lb.fNIRS_check_quality(Rx2_Tx2_O2Hb, 100, plot=True)
+# lb.fNIRS_check_quality(Rx2_Tx3_O2Hb, 100, plot=True)
+# plt.plot(Rx1_Tx1_O2Hb, label='Rx1_Tx1_O2Hb')
+# plt.plot(Rx1_Tx2_O2Hb, label='Rx1_Tx2_O2Hb')
+# plt.plot(Rx1_Tx3_O2Hb, label='Rx1_Tx3_O2Hb')
+# plt.plot(Rx2_Tx1_O2Hb, label='Rx2_Tx1_O2Hb')
+# plt.plot(Rx2_Tx2_O2Hb, label='Rx2_Tx2_O2Hb')
+# plt.plot(Rx2_Tx3_O2Hb, label='Rx2_Tx3_O2Hb')
+# plt.legend()
+# plt.show()
+for singal in list_data:
+    mask, z = lb.detect_motion_mask_from_movstd(2, singal, 100)
 
 
 

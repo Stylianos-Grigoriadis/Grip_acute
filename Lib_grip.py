@@ -14,6 +14,8 @@ import itertools
 from itertools import chain
 from scipy.stats import pearsonr
 from scipy.signal import welch
+from scipy.interpolate import UnivariateSpline
+from scipy.signal import butter, filtfilt
 
 def Ent_Ap(data, dim, r):
     """
@@ -1108,6 +1110,50 @@ def fNIRS_check_quality(y, fs, plot=True):
     return good, peak_height
 
 def moving_standard_deviation(signal, time_window, fs, plot=False):
+    """
+        Calculate the moving (sliding) standard deviation of the signal's first derivative.
+
+        This function estimates how rapidly the input signal changes within short,
+        overlapping time windows. It is primarily used for detecting motion artifacts
+        in fNIRS signals (e.g., O2Hb or HHb).
+
+        Steps:
+        1. Compute the first derivative of the signal to emphasize fast fluctuations.
+        2. Slide a window of duration `time_window` seconds through the derivative
+           (windows are fully overlapping, step = 1 sample).
+        3. For each position, compute the local mean and mean of squares using
+           convolution, and derive the local standard deviation as:
+               std = sqrt(E[x^2] - (E[x])^2)
+        4. Return the resulting moving standard deviation at each sample.
+
+         Parameters
+         ----------
+         signal : array-like
+             Input time series (e.g., O2Hb or HHb).
+         time_window : float
+             Length of the sliding window in seconds (e.g., 1.0).
+         fs : float
+             Sampling frequency in Hz.
+         plot : bool, optional
+             If True, plot the original signal, its derivative, and the moving STD.
+
+        Returns
+        -------
+        mov_std : ndarray
+            Moving standard deviation (same length as signal).
+        dy : ndarray
+            First derivative of the signal (for inspection).
+        w : int
+            Window length in samples used for the moving calculation.
+
+        Notes
+        -----
+        - Windows are fully overlapping (step = 1 sample) to produce a smooth,
+          sample-by-sample estimate of local variability.
+        - Larger `time_window` values make detection more robust but less sensitive
+          to short transients; smaller values increase sensitivity.
+    """
+
     y = np.array(signal)
     dy = np.diff(y, prepend=y[0]) * fs
     w = int(round(time_window * fs))
@@ -1130,6 +1176,51 @@ def moving_standard_deviation(signal, time_window, fs, plot=False):
     return mov_std, dy, w
 
 def detect_motion_mask_from_movstd(time_window, signal, fs, thresh_z=4, plot=True):
+    """
+        Detect motion artifacts in a time-series signal using the moving standard deviation.
+
+        This function standardizes the moving standard deviation (computed from the signal's
+        derivative) into robust z-scores and flags segments likely affected by motion artifacts.
+        Detection is based on how strongly the local variability deviates from the typical
+        (median) behavior of the signal.
+
+        Steps
+        -----
+        1. Compute the moving standard deviation of the signal's derivative using
+           `moving_standard_deviation()`.
+        2. Standardize it with a robust z-score:
+               z = (mov_std - median) / (1.4826 * MAD)
+           where MAD is the Median Absolute Deviation.
+        3. Flag samples as motion artifacts when z > `thresh_z`.
+        4. Optionally, plot the signal and z-scores with shaded motion regions.
+
+        Parameters
+        ----------
+        time_window : float
+            Length of the sliding window in seconds (passed to `moving_standard_deviation`).
+        signal : array-like
+            Input time-series data (e.g., O2Hb or HHb).
+        fs : float
+            Sampling frequency in Hz.
+        thresh_z : float, optional
+            Z-score threshold for detecting motion artifacts (default is 4.0).
+        plot : bool, optional
+            If True, plot the signal (blue), z-scores (black), threshold line (red),
+            and detected motion regions (shaded red).
+
+        Returns
+        -------
+        mask : ndarray of bool
+            Boolean array (same length as signal). True where motion is detected.
+        z : ndarray
+            Robust z-scores corresponding to each sample.
+
+        Notes
+        -----
+        - The robust z-score uses the median and MAD, making it resistant to outliers.
+        - Higher `thresh_z` values make detection more conservative (fewer artifacts flagged).
+        - The plot provides a quick visual check of detection quality.
+        """
     mov_std, dy, w = moving_standard_deviation(signal, time_window, fs)
 
     mov_std = np.array(mov_std)
@@ -1169,7 +1260,7 @@ def detect_motion_mask_from_movstd(time_window, signal, fs, thresh_z=4, plot=Tru
 
     return mask, z
 
-def mask_to_segments(mask):
+def mask_to_segments(mask, n, fs, z, signal, thresh_z=4, plot=False):
     segs = []
     on = False
     for i, m in enumerate(mask):
@@ -1181,26 +1272,288 @@ def mask_to_segments(mask):
             on = False
     if on:
         segs.append((s, len(mask)-1))
-    return segs
-
-def postprocess_segments(segs, n, fs, min_len_sec=0.15, pad_sec=0.20):
-    """Merge, pad, and drop ultra-short detections."""
     if not segs:
         return []
-    pad = int(round(pad_sec * fs))
-    for (start, end) in segs:
-        segs = [(max(0, start-pad), min(n-1, end+pad))]
+    else:
+        cleaned = postprocess_segments(segs, n, fs, min_len_sec=0.15, pad_sec=0.20)
+        if plot:
+            t = np.arange(len(signal)) / fs
+            fig, ax1 = plt.subplots(figsize=(9, 4))
 
-    # merge overlaps
-    segs.sort()
-    merged = [segs[0]]
-    for start, end in segs[1:]:
-        ps, pe = merged[-1]
-        if start <= pe + 1:
-            merged[-1] = (ps, max(pe, end))
+            # --- Plot the raw signal (left y-axis) ---
+            ax1.plot(t, signal, color='blue', label='Signal')
+            ax1.set_xlabel('Time (s)')
+            ax1.set_ylabel('Signal', color='blue')
+            ax1.tick_params(axis='y', labelcolor='blue')
+
+            # --- Plot z-score (right y-axis) ---
+            ax2 = ax1.twinx()
+            ax2.plot(t, z, color='black', label='z-score')
+            ax2.axhline(thresh_z, color='red', linestyle='--', lw=1)
+            ax2.set_ylabel('Robust z-score', color='black')
+            ax2.tick_params(axis='y', labelcolor='black')
+
+            # --- Mark raw motion points (thin red) ---
+            for i in range(len(mask)):
+                if mask[i]:
+                    ax1.axvspan(t[i], t[i], color='tomato', alpha=0.3)
+
+            # --- Mark postprocessed motion segments (thicker dark red) ---
+            for start, end in cleaned:
+                ax1.axvspan(t[start], t[end], color='darkred', alpha=0.4)
+
+            plt.title('Motion detection (red = raw, dark red = cleaned)')
+            plt.tight_layout()
+            plt.show()
+
+    return cleaned
+
+def postprocess_segments(segs, n, fs, min_len_sec=0.15, pad_sec=0.20):
+    """
+    This function goes through all detected motion segments and performs
+    three post-processing steps: padding, merging, and cleaning.
+    First, each segment is extended slightly before and after to capture
+    the full motion period. Then overlapping or adjacent segments are merged
+    into one continuous block. Finally, very short segments (shorter than
+    `min_len_sec`) are removed to avoid false detections.
+
+    Parameters
+    ----------
+    segs : list of tuples
+        List of (start_index, end_index) segments (from mask_to_segments()).
+    n : int
+        Total number of samples in the signal (len(signal)).
+    fs : float
+        Sampling frequency (Hz).
+    min_len_sec : float, optional
+        Minimum duration (in seconds) for a segment to keep.
+        Shorter segments are dropped.
+    pad_sec : float, optional
+        Extra padding to add before and after each segment (seconds).
+
+    Returns
+    -------
+    merged : list of tuples
+        Cleaned list of (start_index, end_index) segments after
+        padding, merging, and removing very short events.
+    """
+
+    if not segs:
+        return []
+
+    pad = int(round(pad_sec * fs))
+    min_len = int(round(min_len_sec * fs))
+
+    padded_segments = []
+    for start, end in segs:
+        start = max(0, start - pad)
+        end = min(n - 1, end + pad)
+        padded_segments.append((start, end))
+
+    padded_segments.sort()
+
+    merged = [padded_segments[0]]
+    for start, end in padded_segments[1:]:
+        prev_start, prev_end = merged[-1]
+        if start <= prev_end + 1:
+            merged[-1] = (prev_start, max(prev_end, end))
         else:
             merged.append((start, end))
-    # drop very short
-    min_len = int(round(min_len_sec * fs))
-    merged = [(start, end) for (start, end) in merged if (end - start + 1) >= min_len]
-    return merged
+
+    cleaned_segments = []
+    for start, end in merged:
+        if (end - start + 1) >= min_len:
+            cleaned_segments.append((start, end))
+
+    return cleaned_segments
+
+def repair_motion_linear(signal, segs, fs, plot=True):
+    """
+    Repair motion artifact segments using simple linear interpolation.
+
+    Parameters
+    ----------
+    signal : array-like
+        The raw O2Hb or HHb signal (1D time series).
+    segs : list of tuples
+        List of (start_index, end_index) segments indicating motion artifact windows.
+    fs : float
+        Sampling frequency in Hz.
+    plot : bool, optional
+        If True, plot the original and repaired signals for visual comparison.
+
+    Returns
+    -------
+    repaired_signal : ndarray
+        The signal after linear interpolation over motion segments.
+
+    Notes
+    -----
+    - Each motion segment (start:end) is replaced by a straight line
+      connecting the signal value immediately before and after the segment.
+    - If a segment touches the start or end of the recording, that edge
+      is left unchanged.
+    """
+    signal = np.array(signal)
+    n = len(signal)
+
+    repaired = signal.copy()
+
+    good = np.ones(n, dtype=bool)
+    for start, end in segs:
+        good[start:end + 1] = False
+
+    idx = np.arange(n)
+    repaired[~good] = np.interp(idx[~good], idx[good], signal[good])
+
+    if plot:
+        t = np.arange(n) / fs
+        plt.figure(figsize=(10, 4))
+        plt.plot(t, signal, color='black', alpha=0.7, label='Original signal')
+        plt.plot(t, repaired, color='dodgerblue', linewidth=1.5, label='Repaired (linear interpolation)')
+
+        # highlight motion segments
+        for start, end in segs:
+            plt.axvspan(t[start], t[end], color='tomato', alpha=0.3)
+
+        plt.xlabel('Time (s)')
+        plt.ylabel('Signal')
+        plt.title('Motion Artifact Repair (Linear Interpolation)')
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
+
+    return repaired
+
+
+def repair_motion_scholkmann(signal, segs, fs, smoothness=0, pre_time=0.5, post_time=0.5, plot=False):
+    """
+    Repair motion artifacts using the cubic spline approach described by Scholkmann et al. (2010).
+
+    Parameters
+    ----------
+    signal : array-like
+        The raw O2Hb or HHb signal (1D time series).
+    segs : list of tuples
+        List of (start_index, end_index) segments indicating motion artifact windows.
+    fs : float
+        Sampling frequency in Hz.
+    smoothness : float, optional
+        Smoothing factor for UnivariateSpline (default=0 for an exact fit).
+    pre_points : int, optional
+        Number of clean samples to use before each motion segment as anchor points.
+    post_points : int, optional
+        Number of clean samples to use after each motion segment as anchor points.
+    plot : bool, optional
+        If True, plot the original and repaired signals.
+
+    Returns
+    -------
+    repaired_signal : ndarray
+        The signal after cubic spline repair and re-leveling.
+    """
+
+    signal = np.array(signal)
+    n = len(signal)
+    repaired = signal.copy()
+
+    pre_points = int(round(pre_time * fs))
+    post_points = int(round(post_time * fs))
+
+    # --- Loop through each motion segment ---
+    for start, end in segs:
+        # define safe boundaries for anchor points
+        pre_start = max(0, start - pre_points)
+        post_end = min(n - 1, end + post_points)
+
+        # indices before and after the artifact (used for spline fitting)
+        anchor_idx = np.concatenate((
+            np.arange(pre_start, start),
+            np.arange(end + 1, post_end + 1)
+        ))
+
+        # if too few points, skip this segment
+        if len(anchor_idx) < 4:
+            continue
+
+        # fit a cubic spline to the anchor points
+        spline = UnivariateSpline(anchor_idx, signal[anchor_idx], s=smoothness)
+
+        # replace motion-contaminated samples with spline values
+        seg_idx = np.arange(start, end + 1)
+        repaired[seg_idx] = spline(seg_idx)
+
+        # --- re-level correction (continuity adjustment) ---
+        # ensure smooth connection at the right boundary
+        if end + 1 < n:
+            offset = signal[end + 1] - repaired[end]
+            repaired[end + 1:] += offset
+
+    # --- Optional plot ---
+    if plot:
+        t = np.arange(n) / fs
+        plt.figure(figsize=(10, 4))
+        plt.plot(t, signal, color='black', alpha=0.7, label='Original signal')
+        plt.plot(t, repaired, color='green', linewidth=1.5, label='Repaired (Scholkmann spline)')
+
+        # highlight motion segments
+        for start, end in segs:
+            plt.axvspan(t[start], t[end], color='tomato', alpha=0.3)
+
+        plt.xlabel('Time (s)')
+        plt.ylabel('Signal')
+        plt.title('Motion Artifact Repair (Scholkmann 2010 - Cubic Spline)')
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
+
+    return repaired
+
+
+def butter_bandpass_filtfilt(x, fs, low=0.01, high=0.30, order=4, plot=False):
+    """
+    Zero-phase Butterworth band-pass for fNIRS.
+
+    Parameters
+    ----------
+    x : 1D array
+    fs : float         # sampling rate (Hz)
+    low, high : float  # cutoffs in Hz (e.g., 0.01–0.30 for HRF; 0.07–0.14 for MW)
+    order : int        # 2–4 is typical; higher = steeper but more ringing
+
+    Returns
+    -------
+    y : 1D array  # filtered signal (same length)
+    """
+    x = np.array(x)
+
+    # # Fill any NaNs so filtfilt doesn’t fail
+    # if np.isnan(x).any():
+    #     idx = np.arange(len(x))
+    #     good = ~np.isnan(x)
+    #     x[~good] = np.interp(idx[~good], idx[good], x[good])
+
+    nyq = fs / 2.0
+    wn = [low/nyq, high/nyq]
+    if not (0 < wn[0] < wn[1] < 1):
+        raise ValueError("Cutoffs must satisfy 0 < low < high < fs/2.")
+
+    b, a = butter(order, wn, btype='band')
+    # keep padlen safe for short records
+    padlen = min(len(x)-1, 3*max(len(a), len(b)))
+    y = filtfilt(b, a, x, padtype='odd', padlen=padlen)
+    if plot:
+        t = np.arange(len(x)) / fs
+        plt.figure(figsize=(10, 4))
+        plt.plot(t, x, label='Original signal', color='black', alpha=0.6)
+        plt.plot(t, y, label='Filtered signal', color='royalblue', linewidth=1.5)
+        plt.xlabel('Time (s)')
+        plt.ylabel('Signal')
+        plt.title(f'Butterworth Band-pass {low}-{high} Hz (order={order})')
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
+
+    return y
+
+

@@ -16,6 +16,7 @@ from scipy.stats import pearsonr
 from scipy.signal import welch
 from scipy.interpolate import UnivariateSpline
 from scipy.signal import butter, filtfilt
+from scipy.signal import butter, sosfiltfilt
 
 def Ent_Ap(data, dim, r):
     """
@@ -713,15 +714,15 @@ def quality_assessment_of_temporal_structure_FFT_method(signal):
     # print(f'p_value = {p_value}')
 
     # Plot the log-log results
-    # plt.figure(figsize=(10,6))
-    # plt.scatter(positive_freqs_log, positive_magnitude_log, label='Log-Log Data', color='blue')
-    # plt.plot(positive_freqs_log, slope * positive_freqs_log + intercept, label=f'Fit: \nSlope = {slope:.2f}\nr = {r}\np = {p}', color='red')
-    # plt.title(f'{name}\nLog-Log Plot of FFT (Frequency vs Magnitude)')
-    # plt.xlabel('Log(Frequency) (Hz)')
-    # plt.ylabel('Log(Magnitude)')
-    # plt.legend()
-    # plt.grid()
-    # plt.show()
+    plt.figure(figsize=(10,6))
+    plt.scatter(positive_freqs_log, positive_magnitude_log, label='Log-Log Data', color='blue')
+    plt.plot(positive_freqs_log, slope * positive_freqs_log + intercept, label=f'Fit: \nSlope = {slope:.2f}\nr = {r}\np = {p}', color='red')
+    plt.title(f'Log-Log Plot of FFT (Frequency vs Magnitude)')
+    plt.xlabel('Log(Frequency) (Hz)')
+    plt.ylabel('Log(Magnitude)')
+    plt.legend()
+    plt.grid()
+    plt.show()
 
     return slope, positive_freqs_log, positive_magnitude_log, intercept, r, p, positive_freqs, positive_magnitude
 
@@ -1044,8 +1045,54 @@ def artinis_read_file(directory, name):
     return data, sampling_frequency
 
 def fNIRS_check_quality(y, fs, plot=True):
-    # y = your HbO signal (1D array)
-    # fs = sampling rate in Hz, e.g. 10 or 50 Hz
+    """
+        Evaluate fNIRS channel quality by detecting a cardiac peak in the PSD.
+
+        This implements a Perdue/Wyser-style check: compute the Welch power spectral
+        density (PSD), isolate the cardiac band (0.6–1.8 Hz), fit a Gaussian to the
+        PSD (in dB) within that band, and use the fitted peak height (above local
+        baseline) as a quality index. A channel is marked "good" if the peak height
+        is >= 12 dB.
+
+        Steps
+        -----
+        1) Remove DC offset from the input signal.
+        2) Estimate PSD via Welch with a 10 s segment (nperseg = fs*10).
+        3) Keep only 0.6–1.8 Hz (cardiac band).
+        4) Fit a Gaussian: P(f) ~= a * exp(-(f - x0)^2 / (2*sigma^2)) + c
+           - a     : peak height above baseline (dB)
+           - x0    : peak frequency (Hz)
+           - sigma : peak width (Hz)
+           - c     : baseline level (dB)
+           The quality metric is a (height above baseline). If the fit fails,
+           falls back to the max PSD (dB) within the cardiac band.
+        5) Decide quality: good = (a >= 12 dB).
+        6) Optionally plot the PSD, the cardiac band, and the 12 dB threshold.
+
+        Parameters
+        ----------
+        y : array-like
+            1D time series (e.g., HbO) for a single channel.
+        fs : float
+            Sampling frequency in Hz.
+        plot : bool, optional
+            If True, show a diagnostic PSD plot.
+
+        Returns
+        -------
+        good : bool
+            True if the channel passes the 12 dB cardiac-peak criterion.
+        peak_height : float
+            Fitted cardiac peak height above baseline (dB). If the fit failed,
+            this is the max PSD (dB) within 0.6–1.8 Hz.
+
+        Notes
+        -----
+        - Using the fitted amplitude 'a' (peak above baseline) is slightly different
+          from thresholding absolute PSD level (a + c); both are reasonable—be consistent.
+        - If there are too few frequency bins in 0.6–1.8 Hz (e.g., very short data),
+          the function returns (False, NaN) and optionally plots a warning figure.
+        """
 
 
     # 1) Remove mean (kill 0 Hz/DC)
@@ -1085,8 +1132,7 @@ def fNIRS_check_quality(y, fs, plot=True):
         popt, _ = curve_fit(gaussian, f_hr, P_hr, p0=[a0, x0, sigma0, c0], maxfev=10000)
 
         a, x0, sigma, c = popt
-        peak_height = a
-        print(c)
+        peak_height = a - c
     except Exception:
         peak_height = np.max(P_hr)  # fallback if fit fails
 
@@ -1095,16 +1141,45 @@ def fNIRS_check_quality(y, fs, plot=True):
 
     # 6) Optional plot
     if plot:
-        plt.figure(figsize=(5, 3))
-        plt.plot(f, Pxx_dB, label='PSD (dB)')
-        plt.axvspan(0.6, 1.8, color='orange', alpha=0.2, label='Cardiac range')
-        plt.axhline(12, color='red', linestyle='--', label='12 dB threshold')
-        plt.xlabel('Frequency (Hz)');
-        plt.ylabel('Power (dB)')
-        plt.title(f'Peak = {peak_height:.1f} dB → {"GOOD" if good else "BAD"} '
-                  f'(win={nperseg / fs:.1f}s)')
-        plt.legend();
-        plt.tight_layout();
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 8), sharex=False, sharey=False)
+
+        # ---------- TOP: full PSD ----------
+        ax1.plot(f, Pxx_dB, color='black', lw=1.2, label='PSD (Welch, dB)')
+        ax1.axvspan(0.6, 1.8, color='orange', alpha=0.2, label='Cardiac band (0.6–1.8 Hz)')
+        baseline = np.min(P_hr)
+        ax1.axhline(baseline, color='gray', linestyle='--', label='Baseline')
+        ax1.axhline(baseline + 12, color='red', linestyle='--', label='+12 dB threshold')
+
+        # Gaussian fit
+        if 'popt' in locals():
+            f_fit = np.linspace(0.6, 1.8, 300)
+            ax1.plot(f_fit, gaussian(f_fit, *popt),
+                     color='red', lw=2, label='Gaussian fit (heart-rate peak)')
+
+        ax1.set_xlabel('Frequency (Hz)')
+        ax1.set_ylabel('Power (dB)')
+        ax1.set_title('Power Spectral Density and Cardiac Gaussian Fit — Full Range')
+        ax1.legend()
+        ax1.grid(alpha=0.3)
+
+        # ---------- BOTTOM: zoomed view ----------
+        ax2.plot(f, Pxx_dB, color='black', lw=1.2, label='PSD (Welch, dB)')
+        ax2.axvspan(0.6, 1.8, color='orange', alpha=0.2, label='Cardiac band (0.6–1.8 Hz)')
+        ax2.axhline(baseline, color='gray', linestyle='--', label='Baseline')
+        ax2.axhline(baseline + 12, color='red', linestyle='--', label='+12 dB threshold')
+
+        if 'popt' in locals():
+            ax2.plot(f_fit, gaussian(f_fit, *popt),
+                     color='red', lw=2, label='Gaussian fit (heart-rate peak)')
+
+        ax2.set_xlim(0.4, 2)
+        ax2.set_xlabel('Frequency (Hz)')
+        ax2.set_ylabel('Power (dB)')
+        ax2.set_title('Zoomed View: 0–3 Hz, −40 to −20 dB')
+        # ax2.legend()
+        ax2.grid(alpha=0.3)
+
+        plt.tight_layout()
         plt.show()
 
     return good, peak_height
@@ -1527,12 +1602,6 @@ def butter_bandpass_filtfilt(x, fs, low=0.01, high=0.30, order=4, plot=False):
     """
     x = np.array(x)
 
-    # # Fill any NaNs so filtfilt doesn’t fail
-    # if np.isnan(x).any():
-    #     idx = np.arange(len(x))
-    #     good = ~np.isnan(x)
-    #     x[~good] = np.interp(idx[~good], idx[good], x[good])
-
     nyq = fs / 2.0
     wn = [low/nyq, high/nyq]
     if not (0 < wn[0] < wn[1] < 1):
@@ -1555,5 +1624,54 @@ def butter_bandpass_filtfilt(x, fs, low=0.01, high=0.30, order=4, plot=False):
         plt.show()
 
     return y
+
+
+def butter_bandpass_filtfilt_SOS(x, fs, low=0.01, high=0.30, order=4, plot=False, demean=False):
+    """
+    Zero-phase Butterworth band-pass for fNIRS (stable SOS implementation).
+
+    Parameters
+    ----------
+    x : 1D array
+    fs : float
+    low, high : float   # Hz (e.g., 0.01–0.30 for HRF; 0.07–0.14 for MW)
+    order : int         # 2–4 typical; higher = steeper & more ringing
+    plot : bool
+    demean : bool       # if True, remove mean before filtering (optional)
+
+    Returns
+    -------
+    y : 1D array
+    """
+    x = np.asarray(x, dtype=float).copy()
+
+    # Handle NaNs so filtering doesn't fail
+    if np.isnan(x).any():
+        idx = np.arange(len(x))
+        good = ~np.isnan(x)
+        x[~good] = np.interp(idx[~good], idx[good], x[good])
+
+    if demean:
+        x -= x.mean()
+
+    # Design Butterworth in numerically-stable SOS form
+    sos = butter(order, [low, high], btype='band', fs=fs, output='sos')
+
+    # Zero-phase forward/backward filtering
+    y = sosfiltfilt(sos, x)
+
+    if plot:
+        t = np.arange(len(x)) / fs
+        plt.figure(figsize=(10, 4))
+        plt.plot(t, x, label='Original', color='black', alpha=0.6)
+        plt.plot(t, y, label=f'Band-pass {low}-{high} Hz', color='royalblue', lw=1.5)
+        plt.xlabel('Time (s)'); plt.ylabel('Signal')
+        plt.title(f'Butterworth (SOS) order={order}')
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
+
+    return y
+
 
 

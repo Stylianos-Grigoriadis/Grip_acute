@@ -66,25 +66,29 @@ list_data_names = ['Rx1_Tx1_O2Hb', 'Rx1_Tx2_O2Hb', 'Rx1_Tx3_O2Hb', 'Rx2_Tx1_O2Hb
 # plt.show()
 fs = 100
 for signal in list_data:
+    plt.plot(signal)
+    plt.show()
     original = signal.copy()
-    mask, z = lb.detect_motion_mask_from_movstd(2, signal, fs)
-    segs = lb.mask_to_segments(mask, len(signal), fs, z, signal, thresh_z=4, plot=True)
-    if segs:
-        repair_interp = lb.repair_motion_linear(signal, segs, fs)
-        repair_spline = lb.repair_motion_scholkmann(signal, segs, fs)
-        original_filtered = lb.butter_bandpass_filtfilt(original, fs, low=0.01, high=0.30)
-        repair_interp_filtered = lb.butter_bandpass_filtfilt(repair_interp, fs, low=0.01, high=0.30)
-        repair_spline_filtered = lb.butter_bandpass_filtfilt(repair_spline, fs, low=0.01, high=0.30)
-
-        plt.plot(repair_interp, label='repair_interp')
-        plt.plot(repair_spline, label='repair_spline')
-        plt.plot(original, label='original')
-        plt.plot(repair_interp_filtered, label='repair_interp_filtered')
-        plt.plot(repair_spline_filtered, label='repair_spline_filtered')
-        plt.plot(original_filtered, label='original_filtered')
-
-        plt.legend()
-        plt.show()
+    print(lb.fNIRS_check_quality(original, 100))
+    original = lb.butter_bandpass_filtfilt_SOS(original, 100, low=0.01, high=1.8, order=4, plot=True, demean=True)
+    # mask, z = lb.detect_motion_mask_from_movstd(2, signal, fs)
+    # segs = lb.mask_to_segments(mask, len(signal), fs, z, signal, thresh_z=4, plot=True)
+    # if segs:
+    #     repair_interp = lb.repair_motion_linear(signal, segs, fs)
+    #     repair_spline = lb.repair_motion_scholkmann(signal, segs, fs)
+    #     original_filtered = lb.butter_bandpass_filtfilt(original, fs, low=0.01, high=0.30)
+    #     repair_interp_filtered = lb.butter_bandpass_filtfilt(repair_interp, fs, low=0.01, high=0.30)
+    #     repair_spline_filtered = lb.butter_bandpass_filtfilt(repair_spline, fs, low=0.01, high=0.30)
+    #
+    #     plt.plot(repair_interp, label='repair_interp')
+    #     plt.plot(repair_spline, label='repair_spline')
+    #     plt.plot(original, label='original')
+    #     plt.plot(repair_interp_filtered, label='repair_interp_filtered')
+    #     plt.plot(repair_spline_filtered, label='repair_spline_filtered')
+    #     plt.plot(original_filtered, label='original_filtered')
+    #
+    #     plt.legend()
+    #     plt.show()
 
 
 

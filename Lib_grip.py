@@ -17,6 +17,8 @@ from scipy.signal import welch
 from scipy.interpolate import UnivariateSpline
 from scipy.signal import butter, filtfilt
 from scipy.signal import butter, sosfiltfilt
+from sklearn.decomposition import PCA
+
 
 def Ent_Ap(data, dim, r):
     """
@@ -656,12 +658,17 @@ def outputs(white, pink, sine):
     sine_SaEn = Ent_Samp(sine, 2, 0.2)
     list_SaEn = [white_SaEn, pink_SaEn, sine_SaEn]
 
+    white_slope, _, _, _, _, _, _, _ = quality_assessment_of_temporal_structure_FFT_method(white)
+    pink_slope, _, _, _, _, _, _, _ = quality_assessment_of_temporal_structure_FFT_method(pink)
+    sine_slope, _, _, _, _, _, _, _ = quality_assessment_of_temporal_structure_FFT_method(sine)
+    list_slope = [round(white_slope, 2), round(pink_slope, 2), round(sine_slope, 2)]
     dist = {'Signals': ['White', 'Pink', 'Sine'],
             'Average': list_average,
             'std': list_std,
             'Total_load': list_total_load,
             'DFA': list_dfa,
-            'SaEn': list_SaEn
+            'SaEn': list_SaEn,
+            'Slope': list_slope
             }
     df = pd.DataFrame(dist)
     print(df)
@@ -714,15 +721,15 @@ def quality_assessment_of_temporal_structure_FFT_method(signal):
     # print(f'p_value = {p_value}')
 
     # Plot the log-log results
-    plt.figure(figsize=(10,6))
-    plt.scatter(positive_freqs_log, positive_magnitude_log, label='Log-Log Data', color='blue')
-    plt.plot(positive_freqs_log, slope * positive_freqs_log + intercept, label=f'Fit: \nSlope = {slope:.2f}\nr = {r}\np = {p}', color='red')
-    plt.title(f'Log-Log Plot of FFT (Frequency vs Magnitude)')
-    plt.xlabel('Log(Frequency) (Hz)')
-    plt.ylabel('Log(Magnitude)')
-    plt.legend()
-    plt.grid()
-    plt.show()
+    # plt.figure(figsize=(10,6))
+    # plt.scatter(positive_freqs_log, positive_magnitude_log, label='Log-Log Data', color='blue')
+    # plt.plot(positive_freqs_log, slope * positive_freqs_log + intercept, label=f'Fit: \nSlope = {slope:.2f}\nr = {r}\np = {p}', color='red')
+    # plt.title(f'Log-Log Plot of FFT (Frequency vs Magnitude)')
+    # plt.xlabel('Log(Frequency) (Hz)')
+    # plt.ylabel('Log(Magnitude)')
+    # plt.legend()
+    # plt.grid()
+    # plt.show()
 
     return slope, positive_freqs_log, positive_magnitude_log, intercept, r, p, positive_freqs, positive_magnitude
 
@@ -1673,5 +1680,36 @@ def butter_bandpass_filtfilt_SOS(x, fs, low=0.01, high=0.30, order=4, plot=False
 
     return y
 
+def Principal_component_analysis(list_of_signals, plot=False):
 
+    shape = len(list_of_signals)
+    z_signals_list = []
+    for signal in list_of_signals:
+        z_signal = z_transform(signal, 1, 0)
+        z_signals_list.append(z_signal)
 
+    X = np.column_stack(z_signals_list)
+
+    pca = PCA()                              # keep all PCs
+    PCs = pca.fit_transform(X)               # (N_samples, N_signals)
+    pcs_list = [PCs[:, i] for i in range(PCs.shape[1])]
+    explained_var = pca.explained_variance_ratio_
+    print(explained_var)
+    print(pcs_list)
+
+    if plot:
+        t = np.arange(X.shape[0])
+        fig, ax = plt.subplots(figsize=(10, 4))
+        # plot inputs with vertical offsets for clarity
+        for i in range(len(z_signals_list)):
+            ax.plot(t, z_signals_list[i], label=f'Signal {i + 1}')
+        ax.plot(t, pcs_list[0], color='black', lw=2, label='PC1')
+        ax.set_xlabel('Time (samples)')
+        ax.set_ylabel('Amplitude (a.u.)')
+        ax.set_title('Input short-channel signals and PC1')
+        ax.legend(loc='upper right', ncol=2)
+        ax.grid(alpha=0.3)
+        fig.tight_layout()
+        plt.show()
+
+    return pcs_list, explained_var

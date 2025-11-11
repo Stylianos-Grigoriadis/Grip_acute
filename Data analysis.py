@@ -65,12 +65,28 @@ list_data_names = ['Rx1_Tx1_O2Hb', 'Rx1_Tx2_O2Hb', 'Rx1_Tx3_O2Hb', 'Rx2_Tx1_O2Hb
 # plt.legend()
 # plt.show()
 fs = 100
-for signal in list_data:
-    plt.plot(signal)
-    plt.show()
-    original = signal.copy()
-    print(lb.fNIRS_check_quality(original, 100))
-    original = lb.butter_bandpass_filtfilt_SOS(original, 100, low=0.01, high=1.8, order=4, plot=True, demean=True)
+# print(lb.fNIRS_check_quality(Rx1_Tx1_O2Hb, 100))
+# print(lb.fNIRS_check_quality(Rx1_Tx2_O2Hb, 100))
+# print(lb.fNIRS_check_quality(Rx1_Tx3_O2Hb, 100))
+# print(lb.fNIRS_check_quality(Rx2_Tx1_O2Hb, 100))
+# print(lb.fNIRS_check_quality(Rx2_Tx2_O2Hb, 100))
+# print(lb.fNIRS_check_quality(Rx2_Tx3_O2Hb, 100))
+
+Rx1_Tx1_O2Hb_filtered = lb.butter_bandpass_filtfilt_SOS(Rx1_Tx1_O2Hb, 100, low=0.01, high=0.3, order=4, plot=False, demean=True)
+Rx1_Tx2_O2Hb_filtered = lb.butter_bandpass_filtfilt_SOS(Rx1_Tx2_O2Hb, 100, low=0.01, high=0.3, order=4, plot=False, demean=True)
+Rx1_Tx3_O2Hb_filtered = lb.butter_bandpass_filtfilt_SOS(Rx1_Tx3_O2Hb, 100, low=0.01, high=0.3, order=4, plot=False, demean=True)
+Rx2_Tx1_O2Hb_filtered = lb.butter_bandpass_filtfilt_SOS(Rx2_Tx1_O2Hb, 100, low=0.01, high=0.3, order=4, plot=False, demean=True)
+Rx2_Tx2_O2Hb_filtered = lb.butter_bandpass_filtfilt_SOS(Rx2_Tx2_O2Hb, 100, low=0.01, high=0.3, order=4, plot=False, demean=True)
+Rx2_Tx3_O2Hb_filtered = lb.butter_bandpass_filtfilt_SOS(Rx2_Tx3_O2Hb, 100, low=0.01, high=0.3, order=4, plot=False, demean=True)
+short_channels_list = [Rx1_Tx1_O2Hb_filtered, Rx1_Tx2_O2Hb_filtered, Rx1_Tx3_O2Hb_filtered]
+pcs_list, explained_var = lb.Principal_component_analysis(short_channels_list, plot=True)
+
+# for signal in list_data:
+#     plt.plot(signal)
+#     plt.show()
+#     original = signal.copy()
+#     print(lb.fNIRS_check_quality(original, 100))
+#     original = lb.butter_bandpass_filtfilt_SOS(original, 100, low=0.01, high=0.3, order=4, plot=True, demean=True)
     # mask, z = lb.detect_motion_mask_from_movstd(2, signal, fs)
     # segs = lb.mask_to_segments(mask, len(signal), fs, z, signal, thresh_z=4, plot=True)
     # if segs:

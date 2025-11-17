@@ -7,6 +7,9 @@ import pandas as pd
 import glob
 import random
 
+plt.rcParams['font.size'] = 16
+plt.rcParams['font.family'] = 'serif'
+
 # Parameters of the % MVC
 desired_sd_MVC_perc = 10 # This corresponds to 105% of MVC
 desired_average_MVC_perc = 25 # This corresponds to 30% of MVC
@@ -40,23 +43,23 @@ base_percentage_onscreen = desired_average_onscreen
 base_part = np.full(1, base_percentage_onscreen)
 
 
-for i in range(1, 10):
-    # Pink training signals
-    pink_signal_before_interpolation = lb.pink_noise_signal_creation_using_FFT_method(Number_of_data_points_in_signal_pink, desired_sd_onscreen, desired_average_onscreen)
-    pink_signal = np.concatenate((pink_signal_before_interpolation, base_part), axis=0)
-    pink_signal = lb.signal_interpolation(pink_signal, interpolation_factor)
-
-    # White training signals
-    white_signal_before_interpolation = lb.white_noise_signal_creation_using_FFT_method(Number_of_data_points_in_signal_white, desired_sd_onscreen, desired_average_onscreen)
-    white_signal = np.concatenate((white_signal_before_interpolation, base_part), axis=0)
-    white_signal = lb.signal_interpolation(white_signal, interpolation_factor)
-
-    # Sine  training signals
-    sine_signal_before_interpolation = lb.sine_wave_signal_creation(Number_of_data_points_in_signal_sine, Number_of_cycles_in_sine_signal, desired_sd_onscreen, desired_average_onscreen)
-    sine_signal = lb.signal_interpolation(sine_signal_before_interpolation, interpolation_factor)
-
-    # Output of all signals
-    lb.outputs(white_signal_before_interpolation, pink_signal_before_interpolation, sine_signal_before_interpolation)
+# for i in range(1, 10):
+#     # Pink training signals
+#     pink_signal_before_interpolation = lb.pink_noise_signal_creation_using_FFT_method(Number_of_data_points_in_signal_pink, desired_sd_onscreen, desired_average_onscreen)
+#     pink_signal = np.concatenate((pink_signal_before_interpolation, base_part), axis=0)
+#     pink_signal = lb.signal_interpolation(pink_signal, interpolation_factor)
+#
+#     # White training signals
+#     white_signal_before_interpolation = lb.white_noise_signal_creation_using_FFT_method(Number_of_data_points_in_signal_white, desired_sd_onscreen, desired_average_onscreen)
+#     white_signal = np.concatenate((white_signal_before_interpolation, base_part), axis=0)
+#     white_signal = lb.signal_interpolation(white_signal, interpolation_factor)
+#
+#     # Sine  training signals
+#     sine_signal_before_interpolation = lb.sine_wave_signal_creation(Number_of_data_points_in_signal_sine, Number_of_cycles_in_sine_signal, desired_sd_onscreen, desired_average_onscreen)
+#     sine_signal = lb.signal_interpolation(sine_signal_before_interpolation, interpolation_factor)
+#
+#     # Output of all signals
+#     lb.outputs(white_signal_before_interpolation, pink_signal_before_interpolation, sine_signal_before_interpolation)
 
     # # Figure for training signals
     # time_pink = np.linspace(0, training_signal_duration, len(pink_signal))
@@ -123,12 +126,12 @@ time_white = np.linspace(0, total_perturbation_trial_duration, len(white_signal_
 time_sine = np.linspace(0, total_perturbation_trial_duration, len(sine_signal_with_perturbation))
 
 plt.scatter(time_pink, pink_signal_with_perturbation, label='Pink', c='pink')
-plt.scatter(time_white, white_signal_with_perturbation, label='White', facecolors='white', edgecolors='black')
-plt.scatter(time_sine, sine_signal_with_perturbation, label='Sine', c='red')
+# plt.scatter(time_white, white_signal_with_perturbation, label='White', facecolors='white', edgecolors='black')
+# plt.scatter(time_sine, sine_signal_with_perturbation, label='Sine', c='red')
 
 plt.plot(time_pink, pink_signal_with_perturbation, lw=0.5, c='pink')
-plt.plot(time_white, white_signal_with_perturbation, lw=0.5, c='black')
-plt.plot(time_sine, sine_signal_with_perturbation, lw=0.5, c='red')
+# plt.plot(time_white, white_signal_with_perturbation, lw=0.5, c='black')
+# plt.plot(time_sine, sine_signal_with_perturbation, lw=0.5, c='red')
 
 plt.ylim(0, 100)
 plt.ylabel("Screen (%)")
@@ -143,7 +146,7 @@ ax2.set_ylabel("MVC (%)")  # optional label
 plt.show()
 
 path = r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip acute perturbation\Data\Signals\P6'
-lb.create_txt_file(pink_signal_with_perturbation, f"Pink_average_{desired_average_MVC_perc}_sd_{desired_sd_MVC_perc}_pert_{perturbation_percentage_MVC_perc}_screenmax_{maximum_screen_MVC_percentage}_interp_{interpolation_factor}", path)
+# lb.create_txt_file(pink_signal_with_perturbation, f"Pink_average_{desired_average_MVC_perc}_sd_{desired_sd_MVC_perc}_pert_{perturbation_percentage_MVC_perc}_screenmax_{maximum_screen_MVC_percentage}_interp_{interpolation_factor}", path)
 # lb.create_txt_file(white_signal_with_perturbation, f"White_average_{desired_average_MVC_perc}_sd_{desired_sd_MVC_perc}_pert_{perturbation_percentage_MVC_perc}_screenmax_{maximum_screen_MVC_percentage}_interp_{interpolation_factor}", path)
 # lb.create_txt_file(sine_signal_with_perturbation, f"Sine_average_{desired_average_MVC_perc}_sd_{desired_sd_MVC_perc}_pert_{perturbation_percentage_MVC_perc}_screenmax_{maximum_screen_MVC_percentage}_interp_{interpolation_factor}", path)
 

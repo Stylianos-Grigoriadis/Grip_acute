@@ -18,6 +18,7 @@ from scipy.interpolate import UnivariateSpline
 from scipy.signal import butter, filtfilt
 from scipy.signal import butter, sosfiltfilt
 from sklearn.decomposition import PCA
+import polars as pl
 
 
 def Ent_Ap(data, dim, r):
@@ -1037,17 +1038,108 @@ def signal_interpolation(signal, step, plot=False):
     return y_new
 
 def artinis_read_file(directory, name):
-    data_for_sampling_frequency = pd.read_excel(f'{directory}\\{name}.xlsx', skiprows=3)
-    sampling_frequency = data_for_sampling_frequency['Unnamed: 1'][0]
-    total_samples = data_for_sampling_frequency['Unnamed: 1'][2]
-    step = 1/sampling_frequency
+    """
+    This function reads the file of an artinis dataset and returns the dataframe with all data and the sampling frequency
+    """
+    data = pl.read_excel(f"{directory}\\{name}.xlsx")
+    data = data.rename({data.columns[1]: "Unnamed: 1"})
+    data = data.slice(2)
+    sampling_frequency = float(data['Unnamed: 1'][0])
+    total_samples = float(data['Unnamed: 1'][2])
+    step = 1 / sampling_frequency
     time = np.arange(0, total_samples * step, step)
-    data_for_columns = pd.read_excel(f'{directory}\\{name}.xlsx', skiprows=40)
-    # column_names = data_for_columns['Trace (Measurement)'][:31].to_list()
+
     column_names = ['Sample number', '[9322] Rx1 - Tx1,Tx2,Tx3  TSI%', '[9322] Rx1 - Tx1,Tx2,Tx3  TSI Fit Factor', '[9323] Rx3 - Tx4,Tx5,Tx6  TSI%', '[9323] Rx3 - Tx4,Tx5,Tx6  TSI Fit Factor', '[9322] Rx1 - Tx1  O2Hb', '[9322] Rx1 - Tx1  HHb', '[9322] Rx1 - Tx2  O2Hb', '[9322] Rx1 - Tx2  HHb', '[9322] Rx1 - Tx3  O2Hb', '[9322] Rx1 - Tx3  HHb', '[9322] Rx2 - Tx1  O2Hb', '[9322] Rx2 - Tx1  HHb', '[9322] Rx2 - Tx2  O2Hb', '[9322] Rx2 - Tx2  HHb', '[9322] Rx2 - Tx3  O2Hb', '[9322] Rx2 - Tx3  HHb', '[9323] Rx3 - Tx4  O2Hb', '[9323] Rx3 - Tx4  HHb', '[9323] Rx3 - Tx5  O2Hb', '[9323] Rx3 - Tx5  HHb', '[9323] Rx3 - Tx6  O2Hb', '[9323] Rx3 - Tx6  HHb', '[9323] Rx4 - Tx4  O2Hb', '[9323] Rx4 - Tx4  HHb', '[9323] Rx4 - Tx5  O2Hb', '[9323] Rx4 - Tx5  HHb', '[9323] Rx4 - Tx6  O2Hb', '[9323] Rx4 - Tx6  HHb', 'Event', 'Event text']
-    data = pd.read_excel(f'{directory}\\{name}.xlsx', skiprows=73)
-    data.columns = column_names
-    data.insert(1, "Time", time)
+    data = data.slice(63)
+
+    data = data.rename(dict(zip(data.columns, column_names)))
+    data = data.with_columns(
+        pl.Series("Time", time)
+    )
+
+    cols = data.columns
+    new_order = [cols[0], "Time"] + cols[1:-1]  # move Time after the first column
+
+    data = data.select(new_order)
+    return data, sampling_frequency
+
+def artinis_read_file_10_sets(directory, name):
+    """
+    This function reads the file of an artinis dataset and returns the dataframe with all data and the sampling frequency
+    """
+    data = pl.read_excel(f"{directory}\\{name}.xlsx", infer_schema_length=None)
+    print(data.columns)
+    data = data.rename({data.columns[1]: "Unnamed: 1"})
+    data = data.slice(2)
+    sampling_frequency = float(data['Unnamed: 1'][0])
+    total_samples = float(data['Unnamed: 1'][2])
+    step = 1 / sampling_frequency
+    time = np.arange(0, total_samples * step, step)
+
+    column_names = ['Sample number', '[9322] Rx1 - Tx1,Tx2,Tx3  TSI%', '[9322] Rx1 - Tx1,Tx2,Tx3  TSI Fit Factor',
+                    '[9323] Rx3 - Tx4,Tx5,Tx6  TSI%', '[9323] Rx3 - Tx4,Tx5,Tx6  TSI Fit Factor',
+                    '[9322] Rx1 - Tx1  O2Hb', '[9322] Rx1 - Tx1  HHb', '[9322] Rx1 - Tx2  O2Hb',
+                    '[9322] Rx1 - Tx2  HHb', '[9322] Rx1 - Tx3  O2Hb', '[9322] Rx1 - Tx3  HHb',
+                    '[9322] Rx2 - Tx1  O2Hb', '[9322] Rx2 - Tx1  HHb', '[9322] Rx2 - Tx2  O2Hb',
+                    '[9322] Rx2 - Tx2  HHb', '[9322] Rx2 - Tx3  O2Hb', '[9322] Rx2 - Tx3  HHb',
+                    '[9323] Rx3 - Tx4  O2Hb', '[9323] Rx3 - Tx4  HHb', '[9323] Rx3 - Tx5  O2Hb',
+                    '[9323] Rx3 - Tx5  HHb', '[9323] Rx3 - Tx6  O2Hb', '[9323] Rx3 - Tx6  HHb',
+                    '[9323] Rx4 - Tx4  O2Hb', '[9323] Rx4 - Tx4  HHb', '[9323] Rx4 - Tx5  O2Hb',
+                    '[9323] Rx4 - Tx5  HHb', '[9323] Rx4 - Tx6  O2Hb', '[9323] Rx4 - Tx6  HHb', 'Event', 'Event text']
+    data = data.slice(63)
+
+    data = data.rename(dict(zip(data.columns, column_names)))
+    data = data.with_columns(
+        pl.Series("Time", time)
+    )
+    cols = data.columns
+    new_order = [cols[0], "Time"] + cols[1:-1]  # move Time after the first column
+    data = data.select(new_order)
+    data = data.with_columns(
+        pl.col("Event").cast(pl.Utf8)
+    )
+    data = data.with_columns(
+        pl.col("Event").fill_null("")
+    )
+    list_indeces = []
+    for i, value in enumerate(data['Event']):
+        if value != "":
+            print(i, value)
+            list_indeces.append(i)
+    training_sets = {}
+
+    for set_num in range(1, 10):  # 1 to 9
+        start = list_indeces[2 * set_num - 1]  # 1,3,5,...,17
+        end = list_indeces[2 * set_num]  # 2,4,6,...,18
+
+        # Polars slice: start row, number of rows
+        training_sets[f"training_set_{set_num}"] = data.slice(start, end - start)
+
+    # 2) Create training_set_with_pert from indices[19] to indices[21]
+    start_pert = list_indeces[19]
+    end_pert = list_indeces[21]
+
+    training_set_with_pert = data.slice(start_pert, end_pert - start_pert)
+
+    training_set_1 = training_sets['training_set_1']
+    training_set_2 = training_sets['training_set_2']
+    training_set_3 = training_sets['training_set_3']
+    training_set_4 = training_sets['training_set_4']
+    training_set_5 = training_sets['training_set_5']
+    training_set_6 = training_sets['training_set_6']
+    training_set_7 = training_sets['training_set_7']
+    training_set_8 = training_sets['training_set_8']
+    training_set_9 = training_sets['training_set_9']
+    print(training_set_1)
+    print(training_set_2)
+    print(training_set_3)
+    print(training_set_4)
+    print(training_set_5)
+    print(training_set_6)
+    print(training_set_7)
+    print(training_set_8)
+    print(training_set_9)
+    print(training_set_with_pert)
 
     return data, sampling_frequency
 

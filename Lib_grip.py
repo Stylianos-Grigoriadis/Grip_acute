@@ -1065,10 +1065,10 @@ def artinis_read_file(directory, name):
 
 def artinis_read_file_10_sets(directory, name):
     """
-    This function reads the file of an artinis dataset and returns the dataframe with all data and the sampling frequency
+    This function reads the file of an artinis dataset and returns a list with 10 dataframes with all data and the sampling
+    frequency. The data frames are cut 10 seconds before the beginning of the event, and it stops at the end event.
     """
     data = pl.read_excel(f"{directory}\\{name}.xlsx", infer_schema_length=None)
-    print(data.columns)
     data = data.rename({data.columns[1]: "Unnamed: 1"})
     data = data.slice(2)
     sampling_frequency = float(data['Unnamed: 1'][0])
@@ -1095,31 +1095,40 @@ def artinis_read_file_10_sets(directory, name):
     cols = data.columns
     new_order = [cols[0], "Time"] + cols[1:-1]  # move Time after the first column
     data = data.select(new_order)
+
     data = data.with_columns(
         pl.col("Event").cast(pl.Utf8)
     )
     data = data.with_columns(
         pl.col("Event").fill_null("")
     )
-    list_indeces = []
+    list_indices = []
     for i, value in enumerate(data['Event']):
         if value != "":
             print(i, value)
-            list_indeces.append(i)
-    training_sets = {}
+            list_indices.append(i)
 
+    numeric_cols = [c for c in column_names if c not in ["Event", "Event text"]]
+
+    data = data.with_columns(
+        [pl.col(c).cast(pl.Float64) for c in numeric_cols]
+    )
+
+    seconds_to_keep_before_the_trial = 10
+    data_points_to_keep_before_the_trial = int(seconds_to_keep_before_the_trial * sampling_frequency)
+    training_sets = {}
     for set_num in range(1, 10):  # 1 to 9
-        start = list_indeces[2 * set_num - 1]  # 1,3,5,...,17
-        end = list_indeces[2 * set_num]  # 2,4,6,...,18
+        start = list_indices[2 * set_num - 1]  # 1,3,5,...,17
+        end = list_indices[2 * set_num]  # 2,4,6,...,18
 
         # Polars slice: start row, number of rows
-        training_sets[f"training_set_{set_num}"] = data.slice(start, end - start)
-
+        training_sets[f"training_set_{set_num}"] = data.slice(start - data_points_to_keep_before_the_trial, end - start + data_points_to_keep_before_the_trial)
     # 2) Create training_set_with_pert from indices[19] to indices[21]
-    start_pert = list_indeces[19]
-    end_pert = list_indeces[21]
+    start_pert = list_indices[19]
+    end_pert = list_indices[21]
 
-    training_set_with_pert = data.slice(start_pert, end_pert - start_pert)
+
+    training_set_with_pert = data.slice(start_pert - data_points_to_keep_before_the_trial, end_pert - start_pert + data_points_to_keep_before_the_trial)
 
     training_set_1 = training_sets['training_set_1']
     training_set_2 = training_sets['training_set_2']
@@ -1130,18 +1139,8 @@ def artinis_read_file_10_sets(directory, name):
     training_set_7 = training_sets['training_set_7']
     training_set_8 = training_sets['training_set_8']
     training_set_9 = training_sets['training_set_9']
-    print(training_set_1)
-    print(training_set_2)
-    print(training_set_3)
-    print(training_set_4)
-    print(training_set_5)
-    print(training_set_6)
-    print(training_set_7)
-    print(training_set_8)
-    print(training_set_9)
-    print(training_set_with_pert)
-
-    return data, sampling_frequency
+    list_training_sets = [training_set_1, training_set_2, training_set_3, training_set_4, training_set_5, training_set_6, training_set_7, training_set_8, training_set_9, training_set_with_pert]
+    return list_training_sets, sampling_frequency
 
 def fNIRS_check_quality(y, fs, plot=True):
     """
@@ -1231,7 +1230,7 @@ def fNIRS_check_quality(y, fs, plot=True):
         popt, _ = curve_fit(gaussian, f_hr, P_hr, p0=[a0, x0, sigma0, c0], maxfev=10000)
 
         a, x0, sigma, c = popt
-        peak_height = a - c
+        peak_height = a
     except Exception:
         peak_height = np.max(P_hr)  # fallback if fit fails
 
@@ -1240,7 +1239,7 @@ def fNIRS_check_quality(y, fs, plot=True):
 
     # 6) Optional plot
     if plot:
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 8), sharex=False, sharey=False)
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(15, 7), sharex=False, sharey=False)
 
         # ---------- TOP: full PSD ----------
         ax1.plot(f, Pxx_dB, color='black', lw=1.2, label='PSD (Welch, dB)')
@@ -1599,7 +1598,6 @@ def repair_motion_linear(signal, segs, fs, plot=True):
 
     return repaired
 
-
 def repair_motion_scholkmann(signal, segs, fs, smoothness=0, pre_time=0.5, post_time=0.5, plot=False):
     """
     Repair motion artifacts using the cubic spline approach described by Scholkmann et al. (2010).
@@ -1683,7 +1681,6 @@ def repair_motion_scholkmann(signal, segs, fs, smoothness=0, pre_time=0.5, post_
 
     return repaired
 
-
 def butter_bandpass_filtfilt(x, fs, low=0.01, high=0.30, order=4, plot=False):
     """
     Zero-phase Butterworth band-pass for fNIRS.
@@ -1723,7 +1720,6 @@ def butter_bandpass_filtfilt(x, fs, low=0.01, high=0.30, order=4, plot=False):
         plt.show()
 
     return y
-
 
 def butter_bandpass_filtfilt_SOS(x, fs, low=0.01, high=0.30, order=4, plot=False, demean=False):
     """
@@ -1805,3 +1801,8 @@ def Principal_component_analysis(list_of_signals, plot=False):
         plt.show()
 
     return pcs_list, explained_var
+
+def RMS(original, filtered):
+    residual = original - filtered
+    rms = np.sqrt(np.mean(residual ** 2))
+    return rms

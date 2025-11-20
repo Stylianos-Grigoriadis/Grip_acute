@@ -35,11 +35,36 @@ for set in list_sets:
         list_RMS_set.append(RMS)
     list_RMS.append(list_RMS_set)
 
-print(len(list_RMS))
-print(len(list_sets))
-
 for i in range(len(list_sets)):
     plt.plot(list_of_frequencies, list_RMS[i], label=f'Set {i+1}')
 plt.legend()
 plt.title(f'Residual analysis for {ID}')
+# Save residual plot
+# save_image_directory = r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip acute perturbation\Figures\Residual plots'
+# save_path = fr"{save_image_directory}\Residual_analysis_{ID}.png"  # or .jpg, .pdf
+# plt.savefig(save_path, dpi=300, bbox_inches='tight')
 plt.show()
+
+spatial_error_average = []
+spatial_error_sd = []
+for set in list_sets:
+
+    # Filtering at 10Hz
+    set['Performance'] = lib.Butterworth(75,10,set['Performance'])
+
+    # Synchronizing target with performance
+    set = lb.synchronization_of_Time_and_ClosestSampleTime_Anestis(set)
+    print(len(set['Performance']))
+    print(len(set['Target']))
+
+    spatial_error = lb.spatial_error(set)
+    plt.plot(set['Performance'][:329], label='Force')
+    plt.plot(set['Target'][:329], label='Target')
+    plt.legend()
+    plt.show()
+
+
+
+
+
+

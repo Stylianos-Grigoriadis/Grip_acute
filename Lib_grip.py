@@ -288,6 +288,7 @@ def synchronization_of_Time_and_ClosestSampleTime_Anestis(df):
     # A temporal fix is to make each negative value None and erase it after
     for i in range(len(df['ClosestSampleTime'])):
         if df['ClosestSampleTime'][i] < 0:
+            print(f'Negative first value {df.loc[i, "ClosestSampleTime"]}')
             df.loc[i, "ClosestSampleTime"] = None
             df.loc[i, "Target"] = None
 
@@ -702,14 +703,14 @@ def quality_assessment_of_temporal_structure_FFT_method(signal):
     positive_freqs = frequencies[1:len(frequencies) // 2]  # Skip the zero frequency
     positive_magnitude = fft_magnitude[1:len(frequencies) // 2]  # Skip the zero frequency
 
-    #  Figure of Frequincies vs Magnitude
-    # plt.figure(figsize=(10,6))
-    # plt.plot(positive_freqs, positive_magnitude)
+     # Figure of Frequincies vs Magnitude
+    plt.figure(figsize=(10,6))
+    plt.plot(positive_freqs, positive_magnitude)
     # plt.title(f'{name}\nFFT of Sine Wave')
-    # plt.xlabel('Frequency (Hz)')
-    # plt.ylabel('Magnitude')
-    # plt.grid()
-    # plt.show()
+    plt.xlabel('Frequency (Hz)')
+    plt.ylabel('Magnitude')
+    plt.grid()
+    plt.show()
 
     positive_freqs_log = np.log10(positive_freqs[positive_freqs > 0])
     positive_magnitude_log = np.log10(positive_magnitude[positive_freqs > 0])
@@ -722,15 +723,15 @@ def quality_assessment_of_temporal_structure_FFT_method(signal):
     # print(f'p_value = {p_value}')
 
     # Plot the log-log results
-    # plt.figure(figsize=(10,6))
-    # plt.scatter(positive_freqs_log, positive_magnitude_log, label='Log-Log Data', color='blue')
-    # plt.plot(positive_freqs_log, slope * positive_freqs_log + intercept, label=f'Fit: \nSlope = {slope:.2f}\nr = {r}\np = {p}', color='red')
-    # plt.title(f'Log-Log Plot of FFT (Frequency vs Magnitude)')
-    # plt.xlabel('Log(Frequency) (Hz)')
-    # plt.ylabel('Log(Magnitude)')
-    # plt.legend()
-    # plt.grid()
-    # plt.show()
+    plt.figure(figsize=(10,6))
+    plt.scatter(positive_freqs_log, positive_magnitude_log, label='Log-Log Data', color='blue')
+    plt.plot(positive_freqs_log, slope * positive_freqs_log + intercept, label=f'Fit: \nSlope = {slope:.2f}\nr = {r}\np = {p}', color='red')
+    plt.title(f'Log-Log Plot of FFT (Frequency vs Magnitude)')
+    plt.xlabel('Log(Frequency) (Hz)')
+    plt.ylabel('Log(Magnitude)')
+    plt.legend()
+    plt.grid()
+    plt.show()
 
     return slope, positive_freqs_log, positive_magnitude_log, intercept, r, p, positive_freqs, positive_magnitude
 

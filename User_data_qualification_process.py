@@ -145,7 +145,7 @@ for i in range(len(list_training_sets)):
         plot = True
     else:
         plot = False
-    evaluation_left_Rx1_Tx1_O2Hb, peak_height_left_Rx1_Tx1_O2Hb = lb.fNIRS_check_quality(left_Rx1_Tx1_O2Hb, 100, plot=plot)
+    evaluation_left_Rx1_Tx1_O2Hb, peak_height_left_Rx1_Tx1_O2Hb = lb.fNIRS_check_quality(left_Rx1_Tx1_O2Hb, 100, plot=True)
     evaluation_left_Rx1_Tx2_O2Hb, peak_height_left_Rx1_Tx2_O2Hb = lb.fNIRS_check_quality(left_Rx1_Tx2_O2Hb, 100, plot=plot)
     evaluation_left_Rx1_Tx3_O2Hb, peak_height_left_Rx1_Tx3_O2Hb = lb.fNIRS_check_quality(left_Rx1_Tx3_O2Hb, 100, plot=plot)
     evaluation_left_Rx2_Tx1_O2Hb, peak_height_left_Rx2_Tx1_O2Hb = lb.fNIRS_check_quality(left_Rx2_Tx1_O2Hb, 100, plot=plot)
@@ -184,7 +184,7 @@ for i in range(len(list_training_sets)):
 
 
 
-    lb.detect_motion_mask_from_movstd(time_window=2, signal=left_Rx1_Tx1_O2Hb, fs=fs, thresh_z=4, plot=plot)
+    lb.detect_motion_mask_from_movstd(time_window=2, signal=left_Rx1_Tx1_O2Hb, fs=fs, thresh_z=4, plot=True)
     lb.detect_motion_mask_from_movstd(time_window=2, signal=left_Rx1_Tx2_O2Hb, fs=fs, thresh_z=4, plot=plot)
     lb.detect_motion_mask_from_movstd(time_window=2, signal=left_Rx1_Tx3_O2Hb, fs=fs, thresh_z=4, plot=plot)
     lb.detect_motion_mask_from_movstd(time_window=2, signal=left_Rx2_Tx1_O2Hb, fs=fs, thresh_z=4, plot=plot)

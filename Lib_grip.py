@@ -441,10 +441,10 @@ def adaptation_time_using_sd(df, sd_factor, consecutive_values, name, mean_spati
     """
     # First synchronize the Time and ClosestSampleTime columns and create a new df with
     # only the synchronized values
-    df = synchronization_of_Time_and_ClosestSampleTime_Anestis(df)
+    # df = synchronization_of_Time_and_ClosestSampleTime_Anestis(df)
     # print(df['Target'])
 
-    perturbation_index = df[df['Target'] != df['Target'].shift(1)].index[1]
+    perturbation_index = df[df['Target'] != df['Target'].shift(1)].index[0]
     print(perturbation_index)
 
     # Calculate the spatial error and the average and sd of the spatial error
@@ -457,14 +457,15 @@ def adaptation_time_using_sd(df, sd_factor, consecutive_values, name, mean_spati
     sd_before_perturbation = sd_spatial_error_isometric_trials
 
     # Create an array with consecutive_values equal number
-    consecutive_values_list = np.arange(0,consecutive_values,1)
+    consecutive_values_list = np.arange(0, consecutive_values,1)
 
     # Iterate the spatial error after the perturbation_index to calculate the time of adaptation
     for i in range(len(spatial_er) - consecutive_values+1):
         if i >= perturbation_index:
 
-            if (all(spatial_er[i + j] < mean + sd_before_perturbation * sd_factor for j in consecutive_values_list) and
-                all(spatial_er[i + j] > mean - sd_before_perturbation * sd_factor for j in consecutive_values_list)
+            if (all(spatial_er[i + j] < mean + sd_before_perturbation * sd_factor for j in consecutive_values_list)
+                #     and
+                # all(spatial_er[i + j] > mean - sd_before_perturbation * sd_factor for j in consecutive_values_list)
             ):
                 time_of_adaptation = df['Time'][i] - df['Time'][perturbation_index]
                 break
@@ -485,6 +486,17 @@ def adaptation_time_using_sd(df, sd_factor, consecutive_values, name, mean_spati
             plt.title(f'{name} Spatial Error\ntime to adapt: {round(time_of_adaptation,3)} sec')
             plt.show()
         except NameError:
+            plt.plot(df['Time'], spatial_er, label='Spatial Error')
+            plt.axhline(y=mean, c='k', label='Average')
+            plt.axhline(y=mean + sd_before_perturbation * sd_factor, c='k', ls=":", label='std')
+            plt.axhline(y=mean - sd_before_perturbation * sd_factor, c='k', ls=":")
+            plt.axvline(x=df['Time'][perturbation_index], linestyle='--', c='gray', label='Perturbation instance')
+
+            plt.legend()
+            plt.ylabel('Force difference (kg)')
+            plt.xlabel('Time (sec)')
+            plt.title(f'No adaptation was evident for {name}')
+            plt.show()
             print(f"No adaptation was evident for {name}")
 
     try:

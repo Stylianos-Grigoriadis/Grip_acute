@@ -19,6 +19,9 @@ from scipy.signal import butter, filtfilt
 from scipy.signal import butter, sosfiltfilt
 from sklearn.decomposition import PCA
 import polars as pl
+from scipy.signal import fftconvolve
+from math import gamma as gamma_fun
+from scipy.signal import fftconvolve
 
 
 def Ent_Ap(data, dim, r):
@@ -1819,3 +1822,155 @@ def RMS(original, filtered):
     residual = original - filtered
     rms = np.sqrt(np.mean(residual ** 2))
     return rms
+
+def task_array_binary(time, start_time):
+    """
+    This functions creates an array which has zeros when the participant did nothing and 1 during the task
+    Input
+        fs                  : sampling frequency
+        time                : the time series of time
+        start_time          : the time_point when the task begun (e.g. 10th second)
+        duration            : how much time was the duration of the task (e.g. 30 seconds)
+    Output
+        binary_rest_task    : the time series of 0 and 1
+    """
+    index_when_task_begun = np.argmin(np.abs(time - start_time))
+    rest_period = np.full(index_when_task_begun, 0)
+    task_period = np.full(len(time) - index_when_task_begun, 1)
+
+    binary_rest_task = np.concatenate((rest_period, task_period))
+
+    return binary_rest_task
+
+
+def make_hrf(fs, peak=6.0, under=16.0, ratio=6.0, length=32.0):
+    t = np.arange(0, length, 1 / fs)
+
+    def gamma(t, a, b):
+
+        return (t ** (a - 1) * np.exp(-t / b)) / (b ** a * gamma_fun(a))
+
+    h = gamma(t, peak, 1.0) - gamma(t, under, 1.0) / ratio
+
+    h /= np.max(h) + 1e-12  # normalize
+
+    return h
+
+def build_task_regressor(binary_rest_task, hrf):
+
+    task_reg = fftconvolve(binary_rest_task, hrf, mode='full')[:len(binary_rest_task)]
+    task_reg_z = z_transform(task_reg, 1, 0)
+    return task_reg_z, binary_rest_task, task_reg
+
+def run_glm_simple(y, task_reg_z, pc1_reg, short_reg):
+    """
+    Simple GLM for one long fNIRS channel.
+
+    Inputs
+    ------
+    y          : 1D array, long channel signal
+    task_reg_z : 1D array, task regressor (z-scored)
+    pc1_reg    : 1D array, PC1 regressor (z-scored)
+    short_reg  : 1D array, paired short-channel regressor (z-scored)
+
+    Returns
+    -------
+    beta_task  : float, beta for task regressor
+    betas      : 1D array of all betas [intercept, task, pc1, short]
+    y_hat      : 1D array, fitted signal
+    cleaned    : 1D array, y with PC1 + short contributions removed
+    """
+
+
+    task_reg_z = z_transform(task_reg_z, 1, 0)
+    pc1_reg = z_transform(pc1_reg, 1, 0)
+    short_reg = z_transform(short_reg, 1, 0)
+
+    X = np.column_stack([
+        np.ones(len(y)),  # intercept
+        task_reg_z,  # task regressor
+        pc1_reg,  # PC1 (global physiology)
+        short_reg  # short channel (local physiology)
+    ])
+
+    # 4) Solve least squares: minimize || y - X beta ||^2
+    betas, *_ = np.linalg.lstsq(X, y, rcond=None)
+
+    # 5) Predicted signal y_hat
+    y_hat = X @ betas
+
+    # 6) Extract beta_task
+    beta_task = betas[1]
+
+    # 7) Build cleaned signal: remove PC1 + short effects
+    cleaned = y - (betas[2] * pc1_reg + betas[3] * short_reg)
+
+    # Determine the goodness of the model y_hat and how much variance do each regressor accounts for
+    correlation_between_actual_data_and_y_hat = np.corrcoef(y, y_hat)[0,1]
+    full_R2, partial_R2_task, partial_R2_pc1, partial_R2_short = glm_partial_r2(y, task_reg_z, pc1_reg, short_reg)
+
+    return beta_task, betas, y_hat, cleaned, correlation_between_actual_data_and_y_hat, full_R2, partial_R2_task, partial_R2_pc1, partial_R2_short
+
+
+def glm_partial_r2(y, task_reg_z, pc1_reg, short_reg):
+    """
+    Compute:
+    - Full model R²
+    - Partial R² for task
+    - Partial R² for PC1
+    - Partial R² for short channel
+    """
+
+    y = np.asarray(y)
+
+    # Build design matrices ------------------------------
+    n = len(y)
+
+    # FULL MODEL (intercept + task + pc1 + short)
+    X_full = np.column_stack([
+        np.ones(n),
+        task_reg_z,
+        pc1_reg,
+        short_reg
+    ])
+
+    # REDUCED models (remove one regressor each)
+    X_no_task = np.column_stack([
+        np.ones(n),
+        pc1_reg,
+        short_reg
+    ])
+
+    X_no_pc1 = np.column_stack([
+        np.ones(n),
+        task_reg_z,
+        short_reg
+    ])
+
+    X_no_short = np.column_stack([
+        np.ones(n),
+        task_reg_z,
+        pc1_reg
+    ])
+
+    # Compute SSRs ----------------------------------------
+    def ssr(X):
+        betas, *_ = np.linalg.lstsq(X, y, rcond=None)
+        res = y - X @ betas
+        return np.sum(res**2)
+
+    ssr_full     = ssr(X_full)
+    ssr_no_task  = ssr(X_no_task)
+    ssr_no_pc1   = ssr(X_no_pc1)
+    ssr_no_short = ssr(X_no_short)
+
+    # Partial R² values -----------------------------------
+    partial_R2_task  = 1 - ssr_full/ssr_no_task
+    partial_R2_pc1   = 1 - ssr_full/ssr_no_pc1
+    partial_R2_short = 1 - ssr_full/ssr_no_short
+
+    # Full R² relative to mean-only model
+    ssr_intercept = ssr(np.ones((n,1)))
+    full_R2 = 1 - ssr_full/ssr_intercept
+
+    return full_R2, partial_R2_task, partial_R2_pc1, partial_R2_short

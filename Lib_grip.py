@@ -1842,7 +1842,6 @@ def task_array_binary(time, start_time):
 
     return binary_rest_task
 
-
 def make_hrf(fs, peak=6.0, under=16.0, ratio=6.0, length=32.0):
     t = np.arange(0, length, 1 / fs)
 
@@ -1903,7 +1902,7 @@ def run_glm_simple(y, task_reg_z, pc1_reg, short_reg):
     beta_task = betas[1]
 
     # 7) Build cleaned signal: remove PC1 + short effects
-    cleaned = y - (betas[2] * pc1_reg + betas[3] * short_reg)
+    cleaned = y - (betas[2] * pc1_reg + betas[3] +* short_reg)
 
     # Determine the goodness of the model y_hat and how much variance do each regressor accounts for
     correlation_between_actual_data_and_y_hat = np.corrcoef(y, y_hat)[0,1]

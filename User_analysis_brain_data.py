@@ -79,10 +79,10 @@ for i in range(len(list_training_sets)):
     right_short_channels_O2Hb = [right_Rx4_Tx4_O2Hb, right_Rx4_Tx5_O2Hb, right_Rx4_Tx6_O2Hb]
     right_short_channels_HHb = [right_Rx4_Tx4_HHb, right_Rx4_Tx5_HHb, right_Rx4_Tx6_HHb]
 
-    left_O2Hb_PC_list, left_O2Hb_PC_explained_variance  = lb.Principal_component_analysis(left_short_channels_O2Hb, plot=False)
-    left_HHb_PC_list, left_HHb_PC_explained_variance  = lb.Principal_component_analysis(left_short_channels_HHb, plot=False)
-    right_O2Hb_PC_list, right_O2Hb_PC_explained_variance  = lb.Principal_component_analysis(right_short_channels_O2Hb, plot=False)
-    right_HHb_PC_list, right_HHb_PC_explained_variance  = lb.Principal_component_analysis(right_short_channels_HHb, plot=False)
+    left_O2Hb_PC_list, left_O2Hb_PC_explained_variance = lb.Principal_component_analysis(left_short_channels_O2Hb, plot=False)
+    left_HHb_PC_list, left_HHb_PC_explained_variance = lb.Principal_component_analysis(left_short_channels_HHb, plot=False)
+    right_O2Hb_PC_list, right_O2Hb_PC_explained_variance = lb.Principal_component_analysis(right_short_channels_O2Hb, plot=False)
+    right_HHb_PC_list, right_HHb_PC_explained_variance = lb.Principal_component_analysis(right_short_channels_HHb, plot=False)
     # print(f'Variation explain from left O2Hb PC1 is {left_O2Hb_PC_explained_variance[0]}')
     # print(f'Variation explain from left HHb PC1 is {left_HHb_PC_explained_variance[0]}')
     # print(f'Variation explain from right O2Hb PC1 is {right_O2Hb_PC_explained_variance[0]}')

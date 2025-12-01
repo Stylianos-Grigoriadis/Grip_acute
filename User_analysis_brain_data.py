@@ -18,6 +18,7 @@ for i in range(len(list_training_sets)):
 
     time = training_set['Time'].to_numpy()
     time = time - time[0]
+    print(time[-1])
 
     left_Rx1_TSI_perc = training_set['[9322] Rx1 - Tx1,Tx2,Tx3  TSI%'].to_numpy()
     left_RX1_TSI_Fit_Factor = training_set['[9322] Rx1 - Tx1,Tx2,Tx3  TSI Fit Factor'].to_numpy()
@@ -130,7 +131,7 @@ for i in range(len(list_training_sets)):
     # ax1.legend(lines_1 + lines_2, labels_1 + labels_2, loc="upper right")
     #
     # plt.show()
-    beta_task, betas, y_hat, cleaned, y_hat_R2, corralation_between_actual_data_and_y_hat, full_R2, partial_R2_task, partial_R2_pc1, partial_R2_short = lb.run_glm_simple(left_Rx1_Tx1_O2Hb, task_reg_z, PC1_left_O2Hb, left_Rx2_Tx1_O2Hb)
+    beta_task, betas, y_hat, cleaned, corralation_between_actual_data_and_y_hat, full_R2, partial_R2_task, partial_R2_pc1, partial_R2_short = lb.run_glm_simple(left_Rx1_Tx1_O2Hb, task_reg_z, PC1_left_O2Hb, left_Rx2_Tx1_O2Hb)
     print(f'corralation_between_actual_data_and_y_hat is {corralation_between_actual_data_and_y_hat}')
     print(f'full_R2 is {full_R2}')
     print(f'partial_R2_task is {partial_R2_task}')
@@ -142,6 +143,8 @@ for i in range(len(list_training_sets)):
     plt.plot(left_Rx1_Tx1_O2Hb, label='left_Rx1_Tx1_O2Hb')
     plt.legend()
     plt.show()
+
+
 
 
 

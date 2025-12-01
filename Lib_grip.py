@@ -1119,10 +1119,17 @@ def artinis_read_file_10_sets(directory, name):
         pl.col("Event").fill_null("")
     )
     list_indices = []
+    list_time_events = []
     for i, value in enumerate(data['Event']):
         if value != "":
-            print(i, value)
+            # print(i, value)
             list_indices.append(i)
+            list_time_events.append(data['Time'][i])
+
+    # plt.plot(data['Time'], data['[9322] Rx1 - Tx1,Tx2,Tx3  TSI%'])
+    for line in list_time_events:
+        plt.axvline(x=line, c='red')
+    plt.show()
 
     numeric_cols = [c for c in column_names if c not in ["Event", "Event text"]]
 
@@ -1158,7 +1165,7 @@ def artinis_read_file_10_sets(directory, name):
     list_training_sets = [training_set_1, training_set_2, training_set_3, training_set_4, training_set_5, training_set_6, training_set_7, training_set_8, training_set_9, training_set_with_pert]
     return list_training_sets, sampling_frequency
 
-def fNIRS_check_quality(y, fs, plot=True):
+def fNIRS_check_quality(y, fs, name, plot=True):
     """
         Evaluate fNIRS channel quality by detecting a cardiac peak in the PSD.
 
@@ -1272,7 +1279,7 @@ def fNIRS_check_quality(y, fs, plot=True):
 
         ax1.set_xlabel('Frequency (Hz)')
         ax1.set_ylabel('Power (dB)')
-        ax1.set_title('Power Spectral Density and Cardiac Gaussian Fit — Full Range')
+        ax1.set_title(f'Power Spectral Density and Cardiac Gaussian Fit for {name}')
         ax1.legend()
         ax1.grid(alpha=0.3)
 
@@ -1798,8 +1805,8 @@ def Principal_component_analysis(list_of_signals, plot=False):
     PCs = pca.fit_transform(X)               # (N_samples, N_signals)
     pcs_list = [PCs[:, i] for i in range(PCs.shape[1])]
     explained_var = pca.explained_variance_ratio_
-    print(explained_var)
-    print(pcs_list)
+    # print(explained_var)
+    # print(pcs_list)
 
     if plot:
         t = np.arange(X.shape[0])
@@ -1902,7 +1909,7 @@ def run_glm_simple(y, task_reg_z, pc1_reg, short_reg):
     beta_task = betas[1]
 
     # 7) Build cleaned signal: remove PC1 + short effects
-    cleaned = y - (betas[2] * pc1_reg + betas[3] +* short_reg)
+    cleaned = y - (betas[2] * pc1_reg + betas[3] * short_reg)
 
     # Determine the goodness of the model y_hat and how much variance do each regressor accounts for
     correlation_between_actual_data_and_y_hat = np.corrcoef(y, y_hat)[0,1]
@@ -1958,9 +1965,9 @@ def glm_partial_r2(y, task_reg_z, pc1_reg, short_reg):
         res = y - X @ betas
         return np.sum(res**2)
 
-    ssr_full     = ssr(X_full)
-    ssr_no_task  = ssr(X_no_task)
-    ssr_no_pc1   = ssr(X_no_pc1)
+    ssr_full = ssr(X_full)
+    ssr_no_task = ssr(X_no_task)
+    ssr_no_pc1 = ssr(X_no_pc1)
     ssr_no_short = ssr(X_no_short)
 
     # Partial R² values -----------------------------------

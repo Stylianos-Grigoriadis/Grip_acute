@@ -1127,9 +1127,9 @@ def artinis_read_file_10_sets(directory, name):
             list_time_events.append(data['Time'][i])
 
     # plt.plot(data['Time'], data['[9322] Rx1 - Tx1,Tx2,Tx3  TSI%'])
-    for line in list_time_events:
-        plt.axvline(x=line, c='red')
-    plt.show()
+    # for line in list_time_events:
+    #     plt.axvline(x=line, c='red')
+    # plt.show()
 
     numeric_cols = [c for c in column_names if c not in ["Event", "Event text"]]
 
@@ -1763,11 +1763,11 @@ def butter_bandpass_filtfilt_SOS(x, fs, low=0.01, high=0.30, order=4, plot=False
     """
     x = np.asarray(x, dtype=float).copy()
 
-    # Handle NaNs so filtering doesn't fail
-    if np.isnan(x).any():
-        idx = np.arange(len(x))
-        good = ~np.isnan(x)
-        x[~good] = np.interp(idx[~good], idx[good], x[good])
+    # # Handle NaNs so filtering doesn't fail
+    # if np.isnan(x).any():
+    #     idx = np.arange(len(x))
+    #     good = ~np.isnan(x)
+    #     x[~good] = np.interp(idx[~good], idx[good], x[good])
 
     if demean:
         x -= x.mean()
@@ -1783,8 +1783,9 @@ def butter_bandpass_filtfilt_SOS(x, fs, low=0.01, high=0.30, order=4, plot=False
         plt.figure(figsize=(10, 4))
         plt.plot(t, x, label='Original', color='black', alpha=0.6)
         plt.plot(t, y, label=f'Band-pass {low}-{high} Hz', color='royalblue', lw=1.5)
-        plt.xlabel('Time (s)'); plt.ylabel('Signal')
-        plt.title(f'Butterworth (SOS) order={order}')
+        plt.xlabel('Time (s)')
+        plt.ylabel('Signal')
+        plt.title(f'Filtering')
         plt.legend()
         plt.tight_layout()
         plt.show()
@@ -1793,7 +1794,6 @@ def butter_bandpass_filtfilt_SOS(x, fs, low=0.01, high=0.30, order=4, plot=False
 
 def Principal_component_analysis(list_of_signals, plot=False):
 
-    shape = len(list_of_signals)
     z_signals_list = []
     for signal in list_of_signals:
         z_signal = z_transform(signal, 1, 0)
@@ -1809,14 +1809,14 @@ def Principal_component_analysis(list_of_signals, plot=False):
     # print(pcs_list)
 
     if plot:
-        t = np.arange(X.shape[0])
+        t = np.linspace(0,40,X.shape[0])
         fig, ax = plt.subplots(figsize=(10, 4))
         # plot inputs with vertical offsets for clarity
         for i in range(len(z_signals_list)):
             ax.plot(t, z_signals_list[i], label=f'Signal {i + 1}')
-        ax.plot(t, pcs_list[0], color='black', lw=2, label='PC1')
-        ax.set_xlabel('Time (samples)')
-        ax.set_ylabel('Amplitude (a.u.)')
+        ax.plot(t, -1*pcs_list[0], color='black', lw=2, label='PC1')
+        ax.set_xlabel('Time')
+        ax.set_ylabel('Amplitude')
         ax.set_title('Input short-channel signals and PC1')
         ax.legend(loc='upper right', ncol=2)
         ax.grid(alpha=0.3)
@@ -1862,10 +1862,26 @@ def make_hrf(fs, peak=6.0, under=16.0, ratio=6.0, length=32.0):
 
     return h
 
-def build_task_regressor(binary_rest_task, hrf):
+def build_task_regressor(binary_rest_task, hrf, plot=False):
 
     task_reg = fftconvolve(binary_rest_task, hrf, mode='full')[:len(binary_rest_task)]
     task_reg_z = z_transform(task_reg, 1, 0)
+    if plot:
+        time = np.linspace(0, 40, len(task_reg_z))
+        plt.plot(time, task_reg_z, label='HRF', lw=3)
+        plt.legend()
+        plt.grid()
+        plt.show()
+
+    # plt.plot(task_reg_z, label='task_reg_z')
+    # plt.legend()
+    # plt.show()
+    # plt.plot(binary_rest_task, label='binary_rest_task')
+    # plt.legend()
+    # plt.show()
+    # plt.plot(task_reg, label='task_reg')
+    # plt.legend()
+    # plt.show()
     return task_reg_z, binary_rest_task, task_reg
 
 def run_glm_simple(y, task_reg_z, pc1_reg, short_reg):

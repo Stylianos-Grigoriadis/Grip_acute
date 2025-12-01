@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import glob
 import os
 
+plt.rcParams['font.family'] = 'serif'        # e.g., 'serif', 'sans-serif', 'monospace'
+plt.rcParams['font.size'] = 16
 directory = r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip acute perturbation\Data\Data to screen\P6\Force data'
 os.chdir(directory)
 
@@ -135,9 +137,10 @@ for i in range(len(list_training_sets)):
     right_Rx4_Tx5_HHb = training_set['[9323] Rx4 - Tx5  HHb'].to_numpy()
     right_Rx4_Tx6_HHb = training_set['[9323] Rx4 - Tx6  HHb'].to_numpy()
 
-    plt.plot(time, left_RX1_TSI_Fit_Factor, label='left_RX1_TSI_Fit_Factor')
-    plt.plot(time, right_RX3_TSI_Fit_Factor, label='right_RX3_TSI_Fit_Factor')
-    plt.axhline(y=90, label='Threshold of accurate data', c='red')
+    plot_time = time - time[0]
+    plt.plot(plot_time, left_RX1_TSI_Fit_Factor, label='left TSI Fit Factor', lw=3)
+    plt.plot(plot_time, right_RX3_TSI_Fit_Factor, label='right TSI Fit Factor', lw=3)
+    plt.axhline(y=90, label='Threshold of accurate data', c='red', lw=3)
     plt.legend()
     plt.show()
 

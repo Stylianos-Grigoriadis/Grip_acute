@@ -1933,7 +1933,6 @@ def run_glm_simple(y, task_reg_z, pc1_reg, short_reg):
 
     return beta_task, betas, y_hat, cleaned, correlation_between_actual_data_and_y_hat, full_R2, partial_R2_task, partial_R2_pc1, partial_R2_short
 
-
 def glm_partial_r2(y, task_reg_z, pc1_reg, short_reg):
     """
     Compute:

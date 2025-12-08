@@ -42,8 +42,8 @@ for i in range(len(list_sets)):
 plt.legend()
 plt.title(f'Residual analysis for {ID}')
 # Save residual plot
-save_image_directory = r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip acute perturbation\Figures\Residual plots'
-save_path = fr"{save_image_directory}\Residual_analysis_{ID}.png"  # or .jpg, .pdf
+# save_image_directory = r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip acute perturbation\Figures\Residual plots'
+# save_path = fr"{save_image_directory}\Residual_analysis_{ID}.png"  # or .jpg, .pdf
 # plt.savefig(save_path, dpi=300, bbox_inches='tight')
 plt.show()
 

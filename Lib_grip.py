@@ -13,7 +13,6 @@ from scipy import stats
 import itertools
 from itertools import chain
 from scipy.stats import pearsonr
-from scipy.signal import welch
 from scipy.interpolate import UnivariateSpline
 from scipy.signal import butter, filtfilt
 from scipy.signal import butter, sosfiltfilt

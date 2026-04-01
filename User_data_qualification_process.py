@@ -8,7 +8,7 @@ import os
 
 plt.rcParams['font.family'] = 'serif'        # e.g., 'serif', 'sans-serif', 'monospace'
 plt.rcParams['font.size'] = 16
-directory = r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip acute perturbation\Data\Data to screen\P6\Force data'
+directory = r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Pilot study Data\P6\Force data'
 os.chdir(directory)
 
 parts = directory.split(os.sep)
@@ -94,16 +94,16 @@ print(ID)
 #
 # plt.show()
 
-directory_hemoglobin = r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip acute perturbation\Data\Data to screen\P6\Brain data'
-name = f'{ID}'
-list_training_sets, fs = lb.artinis_read_file_10_sets(directory_hemoglobin, name)
-
+directory_hemoglobin = r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Pilot study Data\Malvina'
+name = f'Malvina Artinis'
+list_training_sets, fs = lb.artinis_read_file_22_events_plot(directory_hemoglobin, name)
+print(list_training_sets)
 
 for i in range(len(list_training_sets)):
     training_set = list_training_sets[i]
     # I will check it out but hypothetically the Rx1 and Rx3 are the long distance receiver
     # I will check it out but hypothetically the 9322 is left side and the 9323 is right side
-    print(training_set.columns)
+    # print(training_set.columns)
     print(f'Set is {i+1}')
 
     time = training_set['Time'].to_numpy()
@@ -145,10 +145,10 @@ for i in range(len(list_training_sets)):
     plt.show()
 
     if i+1 == 8:
-        plot = True
+        plot = False
     else:
         plot = False
-    evaluation_left_Rx1_Tx1_O2Hb, peak_height_left_Rx1_Tx1_O2Hb = lb.fNIRS_check_quality(left_Rx1_Tx1_O2Hb, 100, '[9322] Rx1 - Tx1  O2Hb', plot=True)
+    evaluation_left_Rx1_Tx1_O2Hb, peak_height_left_Rx1_Tx1_O2Hb = lb.fNIRS_check_quality(left_Rx1_Tx1_O2Hb, 100, '[9322] Rx1 - Tx1  O2Hb', plot=plot)
     evaluation_left_Rx1_Tx2_O2Hb, peak_height_left_Rx1_Tx2_O2Hb = lb.fNIRS_check_quality(left_Rx1_Tx2_O2Hb, 100, '[9322] Rx1 - Tx2  O2Hb', plot=plot)
     evaluation_left_Rx1_Tx3_O2Hb, peak_height_left_Rx1_Tx3_O2Hb = lb.fNIRS_check_quality(left_Rx1_Tx3_O2Hb, 100, '[9322] Rx1 - Tx3  O2Hb', plot=plot)
     evaluation_left_Rx2_Tx1_O2Hb, peak_height_left_Rx2_Tx1_O2Hb = lb.fNIRS_check_quality(left_Rx2_Tx1_O2Hb, 100, '[9322] Rx2 - Tx1  O2Hb', plot=plot)
@@ -187,7 +187,7 @@ for i in range(len(list_training_sets)):
 
 
 
-    lb.detect_motion_mask_from_movstd(time_window=2, signal=left_Rx1_Tx1_O2Hb, fs=fs, thresh_z=4, plot=True)
+    lb.detect_motion_mask_from_movstd(time_window=2, signal=left_Rx1_Tx1_O2Hb, fs=fs, thresh_z=4, plot=plot)
     lb.detect_motion_mask_from_movstd(time_window=2, signal=left_Rx1_Tx2_O2Hb, fs=fs, thresh_z=4, plot=plot)
     lb.detect_motion_mask_from_movstd(time_window=2, signal=left_Rx1_Tx3_O2Hb, fs=fs, thresh_z=4, plot=plot)
     lb.detect_motion_mask_from_movstd(time_window=2, signal=left_Rx2_Tx1_O2Hb, fs=fs, thresh_z=4, plot=plot)

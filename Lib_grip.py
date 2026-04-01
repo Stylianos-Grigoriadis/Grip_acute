@@ -21,7 +21,7 @@ import polars as pl
 from scipy.signal import fftconvolve
 from math import gamma as gamma_fun
 from scipy.signal import fftconvolve
-
+from matplotlib.widgets import SpanSelector, TextBox, Button
 
 def Ent_Ap(data, dim, r):
     """
@@ -1078,10 +1078,41 @@ def artinis_read_file(directory, name):
     data = data.select(new_order)
     return data, sampling_frequency
 
-def artinis_read_file_10_sets(directory, name):
+def artinis_read_file_22_events_plot(directory, name, plot_every_n=100):
     """
-    This function reads the file of an artinis dataset and returns a list with 10 dataframes with all data and the sampling
-    frequency. The data frames are cut 10 seconds before the beginning of the event, and it stops at the end event.
+    Reads the Artinis file and creates an interactive plot with:
+    - Time on the main x-axis
+    - Index on a secondary x-axis below
+    - Red vertical lines for the file start events
+    - Orange vertical lines for the automatically created end events
+    - Green vertical lines for manually added events
+    - Black vertical lines 10 seconds before the red file events
+    - A legend showing all event types
+
+    Trial structure:
+        - First 6 trials   -> perturbation trials pre, duration 20 s
+        - Next 10 trials   -> training sets, duration 30 s
+        - Last 6 trials    -> perturbation trials post, duration 20 s
+
+    Interactive plot:
+        - Existing black/red/orange/green events can be manipulated
+        - Use mouse drag to select an area
+        - Press SPACE to add a new green event line at the first index of the selected area
+        - Press DELETE to remove any event lines inside the selected area
+        - Two boxes under the x-axes show the start and end indices of the selected span
+        - A middle box shows the indices of event lines inside the selected span
+        - A text box allows manual entry of an index
+        - A button adds a green event line at that index
+
+    After closing the plot:
+        - all final event indices are sorted
+        - the full dataframe is cut into sets every 3 events:
+            events 1,2,3   -> set 1
+            events 4,5,6   -> set 2
+            ...
+            events 64,65,66 -> set 22
+        - each set is sliced from the 1st event of the triplet to the 3rd event of the triplet
+        - all returned sets are Polars DataFrames
     """
     data = pl.read_excel(f"{directory}\\{name}.xlsx", infer_schema_length=None)
     data = data.rename({data.columns[1]: "Unnamed: 1"})
@@ -1107,8 +1138,9 @@ def artinis_read_file_10_sets(directory, name):
     data = data.with_columns(
         pl.Series("Time", time)
     )
+
     cols = data.columns
-    new_order = [cols[0], "Time"] + cols[1:-1]  # move Time after the first column
+    new_order = [cols[0], "Time"] + cols[1:-1]
     data = data.select(new_order)
 
     data = data.with_columns(
@@ -1117,52 +1149,274 @@ def artinis_read_file_10_sets(directory, name):
     data = data.with_columns(
         pl.col("Event").fill_null("")
     )
+
     list_indices = []
     list_time_events = []
     for i, value in enumerate(data['Event']):
         if value != "":
-            # print(i, value)
             list_indices.append(i)
             list_time_events.append(data['Time'][i])
 
-    # plt.plot(data['Time'], data['[9322] Rx1 - Tx1,Tx2,Tx3  TSI%'])
-    # for line in list_time_events:
-    #     plt.axvline(x=line, c='red')
-    # plt.show()
-
     numeric_cols = [c for c in column_names if c not in ["Event", "Event text"]]
-
     data = data.with_columns(
         [pl.col(c).cast(pl.Float64) for c in numeric_cols]
     )
 
-    seconds_to_keep_before_the_trial = 10
-    data_points_to_keep_before_the_trial = int(seconds_to_keep_before_the_trial * sampling_frequency)
-    training_sets = {}
-    for set_num in range(1, 10):  # 1 to 9
-        start = list_indices[2 * set_num - 1]  # 1,3,5,...,17
-        end = list_indices[2 * set_num]  # 2,4,6,...,18
+    # ---------------- PLOT ----------------
+    y_col = '[9322] Rx1 - Tx1  O2Hb'
 
-        # Polars slice: start row, number of rows
-        training_sets[f"training_set_{set_num}"] = data.slice(start - data_points_to_keep_before_the_trial, end - start + data_points_to_keep_before_the_trial)
-    # 2) Create training_set_with_pert from indices[19] to indices[21]
-    start_pert = list_indices[19]
-    end_pert = list_indices[21]
+    idx_plot = np.arange(0, data.height, plot_every_n)
+    time_plot = data['Time'].to_numpy()[idx_plot]
+    y_plot = data[y_col].to_numpy()[idx_plot]
+    time_full = data['Time'].to_numpy()
 
+    fig, ax = plt.subplots(figsize=(14, 6))
+    ax.plot(time_plot, y_plot, label=y_col)
 
-    training_set_with_pert = data.slice(start_pert - data_points_to_keep_before_the_trial, end_pert - start_pert + data_points_to_keep_before_the_trial)
+    event_lines = []
+    added_event_indices = []
 
-    training_set_1 = training_sets['training_set_1']
-    training_set_2 = training_sets['training_set_2']
-    training_set_3 = training_sets['training_set_3']
-    training_set_4 = training_sets['training_set_4']
-    training_set_5 = training_sets['training_set_5']
-    training_set_6 = training_sets['training_set_6']
-    training_set_7 = training_sets['training_set_7']
-    training_set_8 = training_sets['training_set_8']
-    training_set_9 = training_sets['training_set_9']
-    list_training_sets = [training_set_1, training_set_2, training_set_3, training_set_4, training_set_5, training_set_6, training_set_7, training_set_8, training_set_9, training_set_with_pert]
-    return list_training_sets, sampling_frequency
+    def add_event_line(idx, color='red', label=None, source='manual'):
+        if idx < 0 or idx >= len(time_full):
+            return None
+
+        t = time_full[idx]
+        line = ax.axvline(x=t, linestyle='--', color=color, label=label)
+        item = {"line": line, "index": int(idx), "time": float(t), "color": color, "source": source}
+        event_lines.append(item)
+        return item
+
+    # Original file start events -> red
+    for k, idx in enumerate(list_indices):
+        if k == 0:
+            add_event_line(idx, color='red', label='File Events', source='file_start')
+        else:
+            add_event_line(idx, color='red', source='file_start')
+
+    # 10 sec before file events -> black
+    pre_event_indices = []
+    for k, idx in enumerate(list_indices):
+        pre_idx = int(round(idx - 10 * sampling_frequency))
+        if pre_idx < 0:
+            pre_idx = 0
+        pre_event_indices.append(pre_idx)
+
+    for k, idx in enumerate(pre_event_indices):
+        if k == 0:
+            add_event_line(idx, color='black', label='Pre Events (-10 s)', source='pre_event')
+        else:
+            add_event_line(idx, color='black', source='pre_event')
+
+    # Automatically created end events -> orange
+    derived_end_indices = []
+    for k, start_idx in enumerate(list_indices):
+        if k < 6:
+            duration_sec = 20
+        elif k < 16:
+            duration_sec = 30
+        else:
+            duration_sec = 20
+
+        end_idx = int(round(start_idx + duration_sec * sampling_frequency))
+        if end_idx >= len(time_full):
+            end_idx = len(time_full) - 1
+
+        derived_end_indices.append(end_idx)
+
+    for k, idx in enumerate(derived_end_indices):
+        if k == 0:
+            add_event_line(idx, color='orange', label='Derived End Events', source='derived_end')
+        else:
+            add_event_line(idx, color='orange', source='derived_end')
+
+    ax.set_xlabel('Time (s)')
+    ax.set_ylabel(y_col)
+
+    def time_to_index(x):
+        return x * sampling_frequency
+
+    def index_to_time(x):
+        return x / sampling_frequency
+
+    secax = ax.secondary_xaxis('bottom', functions=(time_to_index, index_to_time))
+    secax.spines['bottom'].set_position(('outward', 40))
+    secax.set_xlabel('Index')
+
+    selected_range = {"xmin": None, "xmax": None, "start_idx": None, "end_idx": None}
+
+    start_box = fig.text(
+        0.22, 0.09, "Start index: -",
+        ha='center', va='center',
+        bbox=dict(boxstyle='round', facecolor='white', edgecolor='black')
+    )
+    events_box = fig.text(
+        0.50, 0.09, "Event indices: -",
+        ha='center', va='center',
+        bbox=dict(boxstyle='round', facecolor='white', edgecolor='black')
+    )
+    end_box = fig.text(
+        0.78, 0.09, "End index: -",
+        ha='center', va='center',
+        bbox=dict(boxstyle='round', facecolor='white', edgecolor='black')
+    )
+
+    def update_event_box(x0, x1):
+        event_indices_in_span = sorted(
+            [item["index"] for item in event_lines if x0 <= item["time"] <= x1]
+        )
+        if event_indices_in_span:
+            events_box.set_text(f"Event indices: {event_indices_in_span}")
+        else:
+            events_box.set_text("Event indices: -")
+
+    def add_manual_event_at_index(new_index):
+        if new_index < 0 or new_index >= len(time_full):
+            print(f"Index {new_index} is out of range. Valid range: 0 to {len(time_full)-1}")
+            return
+
+        label = 'Manual Events' if not any(item["source"] == 'manual' for item in event_lines) else None
+        add_event_line(new_index, color='green', label=label, source='manual')
+        added_event_indices.append(new_index)
+
+        new_time = time_full[new_index]
+        print(f"Added event at index {new_index}, time {new_time:.3f} s")
+
+        xmin = selected_range["xmin"]
+        xmax = selected_range["xmax"]
+        if xmin is not None and xmax is not None:
+            x0 = min(xmin, xmax)
+            x1 = max(xmin, xmax)
+            update_event_box(x0, x1)
+
+        ax.legend()
+        fig.canvas.draw_idle()
+
+    def onselect(xmin, xmax):
+        x0 = min(xmin, xmax)
+        x1 = max(xmin, xmax)
+
+        start_idx = int(np.argmin(np.abs(time_full - x0)))
+        end_idx = int(np.argmin(np.abs(time_full - x1)))
+
+        selected_range["xmin"] = xmin
+        selected_range["xmax"] = xmax
+        selected_range["start_idx"] = start_idx
+        selected_range["end_idx"] = end_idx
+
+        start_box.set_text(f"Start index: {start_idx}")
+        end_box.set_text(f"End index: {end_idx}")
+        update_event_box(x0, x1)
+        fig.canvas.draw_idle()
+
+    span = SpanSelector(
+        ax,
+        onselect,
+        'horizontal',
+        useblit=True,
+        props=dict(alpha=0.2, facecolor='gray'),
+        interactive=True,
+        drag_from_anywhere=True
+    )
+
+    ax_textbox = plt.axes([0.35, 0.01, 0.18, 0.05])
+    ax_button = plt.axes([0.55, 0.01, 0.12, 0.05])
+
+    text_box = TextBox(ax_textbox, 'Index ', initial='')
+    button_add = Button(ax_button, 'Add event')
+
+    def on_button_click(event):
+        text_value = text_box.text.strip()
+
+        if text_value == '':
+            print("Please enter an index.")
+            return
+
+        try:
+            new_index = int(text_value)
+        except ValueError:
+            print("Invalid index. Please enter an integer.")
+            return
+
+        add_manual_event_at_index(new_index)
+
+    button_add.on_clicked(on_button_click)
+
+    def on_key(event):
+        xmin = selected_range["xmin"]
+        xmax = selected_range["xmax"]
+
+        if event.key == ' ':
+            if xmin is None or xmax is None:
+                return
+
+            x0 = min(xmin, xmax)
+            new_index = int(np.argmin(np.abs(time_full - x0)))
+            add_manual_event_at_index(new_index)
+
+        elif event.key == 'delete':
+            if xmin is None or xmax is None:
+                return
+
+            x0 = min(xmin, xmax)
+            x1 = max(xmin, xmax)
+
+            to_keep = []
+            removed = []
+
+            for item in event_lines:
+                if x0 <= item["time"] <= x1:
+                    item["line"].remove()
+                    removed.append(item)
+                else:
+                    to_keep.append(item)
+
+            event_lines[:] = to_keep
+
+            if removed:
+                removed_indices = sorted([item["index"] for item in removed])
+                print(f"Deleted events at indices: {removed_indices}")
+                update_event_box(x0, x1)
+                ax.legend()
+                fig.canvas.draw_idle()
+
+    fig.canvas.mpl_connect('key_press_event', on_key)
+
+    ax.legend()
+    plt.subplots_adjust(bottom=0.30)
+    plt.show()
+    # --------------------------------------
+
+    final_event_indices = sorted([item["index"] for item in event_lines])
+
+    # --------- CUT FULL DATAFRAME INTO 22 POLARS DATAFRAMES EVERY 3 EVENTS ---------
+    list_22_sets = []
+
+    n_triplets = len(final_event_indices) // 3
+
+    for i in range(n_triplets):
+        idx1 = final_event_indices[3 * i]
+        idx2 = final_event_indices[3 * i + 1]
+        idx3 = final_event_indices[3 * i + 2]
+
+        start_idx = min(idx1, idx2, idx3)
+        end_idx = max(idx1, idx2, idx3)
+
+        df_set = data.slice(start_idx, end_idx - start_idx + 1)
+        list_22_sets.append(df_set)
+
+    if len(list_22_sets) != 22:
+        print(f"Warning: {len(list_22_sets)} sets were created instead of 22. Final number of events = {len(final_event_indices)}")
+
+    return (
+        data,
+        sampling_frequency,
+        list_indices,
+        list_time_events,
+        pre_event_indices,
+        derived_end_indices,
+        final_event_indices,
+        list_22_sets
+    )
 
 def fNIRS_check_quality(y, fs, name, plot=True):
     """

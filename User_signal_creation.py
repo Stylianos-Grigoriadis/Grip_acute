@@ -46,8 +46,8 @@ print(f"The total duration of the set is {total_perturbation_trial_duration} sec
 base_percentage_onscreen = desired_average_onscreen
 base_part = np.full(1, base_percentage_onscreen)
 
-for i in range(1, 11):
-    folder_directory = r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip acute perturbation\Data\Signals\Collection'
+for i in range(1, 21):
+    folder_directory = r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training children\Data\Signals\Collection 2'
     os.chdir(folder_directory)
 
     name_pink = f'Pink_{i}'
@@ -62,19 +62,19 @@ for i in range(1, 11):
 
     for j in range(1, 11):
 
-        pink_signal_before_interpolation = lb.pink_noise_signal_creation_using_FFT_method(Number_of_data_points_in_signal_pink, desired_sd_onscreen, desired_average_onscreen)
-        pink_signal = lb.signal_interpolation(pink_signal_before_interpolation, interpolation_factor)
+        pink_signal = lb.pink_noise_signal_creation_using_FFT_method(Number_of_data_points_in_signal_pink, desired_sd_onscreen, desired_average_onscreen)
+        # pink_signal = lb.signal_interpolation(pink_signal, interpolation_factor)
 
-        white_signal_before_interpolation = lb.white_noise_signal_creation_using_FFT_method(Number_of_data_points_in_signal_white, desired_sd_onscreen, desired_average_onscreen)
-        white_signal = lb.signal_interpolation(white_signal_before_interpolation, interpolation_factor)
+        white_signal = lb.white_noise_signal_creation_using_FFT_method(Number_of_data_points_in_signal_white, desired_sd_onscreen, desired_average_onscreen)
+        # white_signal = lb.signal_interpolation(white_signal, interpolation_factor)
 
-        sine_signal_before_interpolation = lb.sine_wave_signal_creation(Number_of_data_points_in_signal_sine, Number_of_cycles_in_sine_signal, desired_sd_onscreen, desired_average_onscreen)
-        sine_signal = lb.signal_interpolation(sine_signal_before_interpolation, interpolation_factor)
+        sine_signal = lb.sine_wave_signal_creation(Number_of_data_points_in_signal_sine, Number_of_cycles_in_sine_signal, desired_sd_onscreen, desired_average_onscreen)
+        # sine_signal = lb.signal_interpolation(sine_signal, interpolation_factor)
 
 
-        lb.create_txt_file(pink_signal, f'T{j}', folder_pink)
-        lb.create_txt_file(white_signal, f'T{j}', folder_white)
-        lb.create_txt_file(sine_signal, f'T{j}', folder_sine)
+        # lb.create_txt_file(pink_signal, f'T{j}', folder_pink)
+        # lb.create_txt_file(white_signal, f'T{j}', folder_white)
+        # lb.create_txt_file(sine_signal, f'T{j}', folder_sine)
 
         # else:
         #
@@ -147,62 +147,62 @@ perturbation_down_3 = lb.perturbation_single_trial_with_random_change(200, pertu
 # plt.plot(perturbation_down_3, label="Up_3")
 # plt.legend()
 # plt.show()
-folder_perturbations = r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip acute perturbation\Data\Signals\Perturbations Post'
-lb.create_txt_file(perturbation_up_1, f'perturbation_up_1', folder_perturbations)
-lb.create_txt_file(perturbation_up_2, f'perturbation_up_2', folder_perturbations)
-lb.create_txt_file(perturbation_up_3, f'perturbation_up_3', folder_perturbations)
-lb.create_txt_file(perturbation_down_1, f'perturbation_down_1', folder_perturbations)
-lb.create_txt_file(perturbation_down_2, f'perturbation_down_2', folder_perturbations)
-lb.create_txt_file(perturbation_down_3, f'perturbation_down_3', folder_perturbations)
+# folder_perturbations = r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip acute perturbation\Data\Signals\Perturbations Post'
+# lb.create_txt_file(perturbation_up_1, f'perturbation_up_1', folder_perturbations)
+# lb.create_txt_file(perturbation_up_2, f'perturbation_up_2', folder_perturbations)
+# lb.create_txt_file(perturbation_up_3, f'perturbation_up_3', folder_perturbations)
+# lb.create_txt_file(perturbation_down_1, f'perturbation_down_1', folder_perturbations)
+# lb.create_txt_file(perturbation_down_2, f'perturbation_down_2', folder_perturbations)
+# lb.create_txt_file(perturbation_down_3, f'perturbation_down_3', folder_perturbations)
 
-
-# Pink training signal + perturbation
-pink_signal_before_interpolation = lb.pink_noise_signal_creation_using_FFT_method(Number_of_data_points_in_signal_pink, desired_sd_onscreen, desired_average_onscreen)
-pink_signal = np.concatenate((pink_signal_before_interpolation, base_part), axis=0)
-pink_signal = lb.signal_interpolation(pink_signal, interpolation_factor)
-Number_of_data_points_in_perturbation_pink = int(time_perturbation_in_seconds * len(pink_signal) / time_signal_in_seconds)
-pink_perturbation_signal = np.full(Number_of_data_points_in_perturbation_pink, perturbation_percentage_onscreen)
-pink_signal_with_perturbation = np.concatenate((pink_signal, base_part, pink_perturbation_signal), axis=0)
-
-# White training signal + perturbation
-white_signal_before_interpolation = lb.white_noise_signal_creation_using_FFT_method(Number_of_data_points_in_signal_white, desired_sd_onscreen, desired_average_onscreen)
-white_signal = np.concatenate((white_signal_before_interpolation, base_part), axis=0)
-white_signal = lb.signal_interpolation(white_signal, interpolation_factor)
-Number_of_data_points_in_perturbation_white = int(time_perturbation_in_seconds * len(white_signal) / time_signal_in_seconds)
-white_perturbation_signal = np.full(Number_of_data_points_in_perturbation_white, perturbation_percentage_onscreen)
-white_signal_with_perturbation = np.concatenate((white_signal, white_perturbation_signal), axis=0)
-
-# Sine training signal + perturbation
-sine_signal_before_interpolation = lb.sine_wave_signal_creation(Number_of_data_points_in_signal_sine, Number_of_cycles_in_sine_signal, desired_sd_onscreen, desired_average_onscreen)
-sine_signal = lb.signal_interpolation(sine_signal_before_interpolation, interpolation_factor)
-Number_of_data_points_in_perturbation_sine = int(time_perturbation_in_seconds * len(sine_signal) / time_signal_in_seconds)
-sine_perturbation_signal = np.full(Number_of_data_points_in_perturbation_sine, perturbation_percentage_onscreen)
-sine_signal_with_perturbation = np.concatenate((sine_signal, sine_perturbation_signal), axis=0)
-
-# Figure for training signals
-time_pink = np.linspace(0, total_perturbation_trial_duration, len(pink_signal_with_perturbation))
-time_white = np.linspace(0, total_perturbation_trial_duration, len(white_signal_with_perturbation))
-time_sine = np.linspace(0, total_perturbation_trial_duration, len(sine_signal_with_perturbation))
-
-plt.scatter(time_pink, pink_signal_with_perturbation, label='Pink', c='pink')
-plt.scatter(time_white, white_signal_with_perturbation, label='White', facecolors='white', edgecolors='black')
-plt.scatter(time_sine, sine_signal_with_perturbation, label='Sine', c='red')
-
-plt.plot(time_pink, pink_signal_with_perturbation, lw=0.5, c='pink')
-plt.plot(time_white, white_signal_with_perturbation, lw=0.5, c='black')
-plt.plot(time_sine, sine_signal_with_perturbation, lw=0.5, c='red')
-
-plt.ylim(0, 100)
-plt.ylabel("Screen (%)")
-plt.xlabel("Time (s)")
-plt.legend()
-
-ax = plt.gca()          # get current axes
-ax2 = ax.twinx()        # create a twin y-axis sharing the same x-axis
-ax2.set_ylim(0, maximum_screen_MVC_percentage)    # optional: set same limits, or different ones
-ax2.set_ylabel("MVC (%)")  # optional label
-
-plt.show()
-
-
+#
+# # Pink training signal + perturbation
+# pink_signal_before_interpolation = lb.pink_noise_signal_creation_using_FFT_method(Number_of_data_points_in_signal_pink, desired_sd_onscreen, desired_average_onscreen)
+# pink_signal = np.concatenate((pink_signal_before_interpolation, base_part), axis=0)
+# pink_signal = lb.signal_interpolation(pink_signal, interpolation_factor)
+# Number_of_data_points_in_perturbation_pink = int(time_perturbation_in_seconds * len(pink_signal) / time_signal_in_seconds)
+# pink_perturbation_signal = np.full(Number_of_data_points_in_perturbation_pink, perturbation_percentage_onscreen)
+# pink_signal_with_perturbation = np.concatenate((pink_signal, base_part, pink_perturbation_signal), axis=0)
+#
+# # White training signal + perturbation
+# white_signal_before_interpolation = lb.white_noise_signal_creation_using_FFT_method(Number_of_data_points_in_signal_white, desired_sd_onscreen, desired_average_onscreen)
+# white_signal = np.concatenate((white_signal_before_interpolation, base_part), axis=0)
+# white_signal = lb.signal_interpolation(white_signal, interpolation_factor)
+# Number_of_data_points_in_perturbation_white = int(time_perturbation_in_seconds * len(white_signal) / time_signal_in_seconds)
+# white_perturbation_signal = np.full(Number_of_data_points_in_perturbation_white, perturbation_percentage_onscreen)
+# white_signal_with_perturbation = np.concatenate((white_signal, white_perturbation_signal), axis=0)
+#
+# # Sine training signal + perturbation
+# sine_signal_before_interpolation = lb.sine_wave_signal_creation(Number_of_data_points_in_signal_sine, Number_of_cycles_in_sine_signal, desired_sd_onscreen, desired_average_onscreen)
+# sine_signal = lb.signal_interpolation(sine_signal_before_interpolation, interpolation_factor)
+# Number_of_data_points_in_perturbation_sine = int(time_perturbation_in_seconds * len(sine_signal) / time_signal_in_seconds)
+# sine_perturbation_signal = np.full(Number_of_data_points_in_perturbation_sine, perturbation_percentage_onscreen)
+# sine_signal_with_perturbation = np.concatenate((sine_signal, sine_perturbation_signal), axis=0)
+#
+# # Figure for training signals
+# time_pink = np.linspace(0, total_perturbation_trial_duration, len(pink_signal_with_perturbation))
+# time_white = np.linspace(0, total_perturbation_trial_duration, len(white_signal_with_perturbation))
+# time_sine = np.linspace(0, total_perturbation_trial_duration, len(sine_signal_with_perturbation))
+#
+# plt.scatter(time_pink, pink_signal_with_perturbation, label='Pink', c='pink')
+# plt.scatter(time_white, white_signal_with_perturbation, label='White', facecolors='white', edgecolors='black')
+# plt.scatter(time_sine, sine_signal_with_perturbation, label='Sine', c='red')
+#
+# plt.plot(time_pink, pink_signal_with_perturbation, lw=0.5, c='pink')
+# plt.plot(time_white, white_signal_with_perturbation, lw=0.5, c='black')
+# plt.plot(time_sine, sine_signal_with_perturbation, lw=0.5, c='red')
+#
+# plt.ylim(0, 100)
+# plt.ylabel("Screen (%)")
+# plt.xlabel("Time (s)")
+# plt.legend()
+#
+# ax = plt.gca()          # get current axes
+# ax2 = ax.twinx()        # create a twin y-axis sharing the same x-axis
+# ax2.set_ylim(0, maximum_screen_MVC_percentage)    # optional: set same limits, or different ones
+# ax2.set_ylabel("MVC (%)")  # optional label
+#
+# plt.show()
+#
+#
 

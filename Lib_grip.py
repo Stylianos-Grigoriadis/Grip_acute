@@ -737,15 +737,15 @@ def quality_assessment_of_temporal_structure_FFT_method(signal):
     # print(f'p_value = {p_value}')
 
     # Plot the log-log results
-    # plt.figure(figsize=(10,6))
-    # plt.scatter(positive_freqs_log, positive_magnitude_log, label='Log-Log Data', color='blue')
-    # plt.plot(positive_freqs_log, slope * positive_freqs_log + intercept, label=f'Fit: \nSlope = {slope:.2f}\nr = {r}\np = {p}', color='red')
-    # plt.title(f'Log-Log Plot of FFT (Frequency vs Magnitude)')
-    # plt.xlabel('Log(Frequency) (Hz)')
-    # plt.ylabel('Log(Magnitude)')
-    # plt.legend()
-    # plt.grid()
-    # plt.show()
+    plt.figure(figsize=(10,6))
+    plt.scatter(positive_freqs_log, positive_magnitude_log, label='Log-Log Data', color='blue')
+    plt.plot(positive_freqs_log, slope * positive_freqs_log + intercept, label=f'Fit: \nSlope = {slope:.2f}\nr = {r}\np = {p}', color='red')
+    plt.title(f'Log-Log Plot of FFT (Frequency vs Magnitude)')
+    plt.xlabel('Log(Frequency) (Hz)')
+    plt.ylabel('Log(Magnitude)')
+    plt.legend()
+    plt.grid()
+    plt.show()
 
     return slope, positive_freqs_log, positive_magnitude_log, intercept, r, p, positive_freqs, positive_magnitude
 

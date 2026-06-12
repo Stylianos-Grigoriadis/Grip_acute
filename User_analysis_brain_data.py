@@ -9,11 +9,13 @@ import os
 plt.rcParams['font.family'] = 'serif'        # e.g., 'serif', 'sans-serif', 'monospace'
 plt.rcParams['font.size'] = 16
 
+directory = r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Data to screen\Sine_1'
+directory_hemoglobin = directory + r'\Brain data'
+name = f'Artinis_S1'
+data, fs, list_indices, list_time_events, pre_event_indices, derived_end_indices, final_event_indices, list_training_sets = lb.artinis_read_file_22_events_plot(directory_hemoglobin, name)
+list_training_sets = list_training_sets[6:-6]
 
-directory_hemoglobin = r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip acute perturbation\Data\Data to screen\P6\Brain data'
-parts = directory_hemoglobin.split(os.sep)
-ID = parts[-2]
-list_training_sets, fs = lb.artinis_read_file_10_sets(directory_hemoglobin, ID)
+
 for i in range(len(list_training_sets)):
     training_set = list_training_sets[i]
     # I will check it out but hypothetically the Rx1 and Rx3 are the long distance receiver

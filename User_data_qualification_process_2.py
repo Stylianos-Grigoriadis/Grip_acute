@@ -31,10 +31,472 @@ target_color = 'red'
 spatial_error_color = 'black'
 spatial_error_band_color = 'rgba(0, 0, 0, 0.18)'
 
+# =========================
+# PERTURBATION SETTINGS
+# =========================
+sampling_frequency = 100
+low_pass_filter_frequency = 15
+sd_factor = 3
+time_window = 1
+time_threshold = 3
+
+perturbation_spatial_error_color = 'black'
+perturbation_threshold_color = 'black'
+perturbation_adaptation_color = 'red'
+perturbation_instance_color = 'gray'
+perturbation_window_color = 'rgba(128, 128, 128, 0.25)'
+
+# =========================
+# HEMOGLOBIN SETTINGS
+# =========================
+brain_directory = directory / 'Brain data'
+artinis_file_name = 'Artinis_S1'
+
+hemoglobin_training_start_sec = 10
+hemoglobin_force_duration = 30
+
+hemoglobin_low_frequency = 0.01
+hemoglobin_high_frequency = 0.30
+hemoglobin_filter_order = 4
+
+hemoglobin_padding_percent = 10
+hemoglobin_gap_percent = 1
+hemoglobin_center_method = 'first'
+
 
 # =========================
 # FUNCTIONS
 # =========================
+
+def create_perturbation_force_target_data_for_javascript(upward_perturbation_results, downward_perturbation_results):
+    """
+    Prepares Performance and Target data so JavaScript can draw a popup graph
+    when a perturbation subplot is clicked.
+    """
+    perturbation_force_target_data = {}
+
+    all_results = upward_perturbation_results + downward_perturbation_results
+
+    for result in all_results:
+        df = result['df']
+        perturbation_index = result['perturbation_index']
+        perturbation_time = df['Time'].iloc[perturbation_index]
+
+        plot_key = result['plot_key']
+
+        force_time_shifted = df['Time'] - perturbation_time
+        target_time_shifted = df['ClosestSampleTime'] - perturbation_time
+
+        perturbation_force_target_data[plot_key] = {
+            'Name': result['name'],
+            'Direction': result['direction'],
+            'Phase': result['phase'],
+            'Trial_Number': result['trial_number'],
+            'Force_Time': clean_numeric_list(force_time_shifted),
+            'Performance': clean_numeric_list(df['Performance']),
+            'Target_Time': clean_numeric_list(target_time_shifted),
+            'Target': clean_numeric_list(df['Target'])
+        }
+
+    return perturbation_force_target_data
+
+
+def read_and_preprocess_perturbation_file(file_path, sampling_frequency, low_pass_filter_frequency):
+    """
+    Reads one perturbation or isometric file, synchronizes it,
+    and low-pass filters the Performance column.
+    """
+    df = pd.read_csv(file_path, skiprows=2)
+    df = lb.synchronization_of_Time_and_ClosestSampleTime_Anestis(df)
+
+    df['Performance'] = lib.Butterworth(
+        sampling_frequency,
+        low_pass_filter_frequency,
+        df['Performance'].to_numpy()
+    )
+
+    return df
+
+
+def load_perturbation_trials(grip_directory, sampling_frequency, low_pass_filter_frequency):
+    """
+    Loads all perturbation trials and the isometric trials.
+    """
+    upward_file_info = [
+        ('Pre', 1, 'Pre_Pert_up_1.csv'),
+        ('Pre', 2, 'Pre_Pert_up_2.csv'),
+        ('Pre', 3, 'Pre_Pert_up_3.csv'),
+        ('Post', 1, 'Post_Pert_up_1.csv'),
+        ('Post', 2, 'Post_Pert_up_2.csv'),
+        ('Post', 3, 'Post_Pert_up_3.csv')
+    ]
+
+    downward_file_info = [
+        ('Pre', 1, 'Pre_Pert_down_1.csv'),
+        ('Pre', 2, 'Pre_Pert_down_2.csv'),
+        ('Pre', 3, 'Pre_Pert_down_3.csv'),
+        ('Post', 1, 'Post_Pert_down_1.csv'),
+        ('Post', 2, 'Post_Pert_down_2.csv'),
+        ('Post', 3, 'Post_Pert_down_3.csv')
+    ]
+
+    upward_trials = []
+    downward_trials = []
+
+    for phase, trial_number, file_name in upward_file_info:
+        file_path = grip_directory / file_name
+
+        if not file_path.exists():
+            raise FileNotFoundError(f'This file was not found: {file_path}')
+
+        df = read_and_preprocess_perturbation_file(
+            file_path=file_path,
+            sampling_frequency=sampling_frequency,
+            low_pass_filter_frequency=low_pass_filter_frequency
+        )
+
+        upward_trials.append({
+            'phase': phase,
+            'trial_number': trial_number,
+            'name': f'{phase} Up {trial_number}',
+            'file_name': file_name,
+            'df': df
+        })
+
+    for phase, trial_number, file_name in downward_file_info:
+        file_path = grip_directory / file_name
+
+        if not file_path.exists():
+            raise FileNotFoundError(f'This file was not found: {file_path}')
+
+        df = read_and_preprocess_perturbation_file(
+            file_path=file_path,
+            sampling_frequency=sampling_frequency,
+            low_pass_filter_frequency=low_pass_filter_frequency
+        )
+
+        downward_trials.append({
+            'phase': phase,
+            'trial_number': trial_number,
+            'name': f'{phase} Down {trial_number}',
+            'file_name': file_name,
+            'df': df
+        })
+
+    isometric_high_path = grip_directory / 'Isometric_high.csv'
+    isometric_low_path = grip_directory / 'Isometric_low.csv'
+
+    if not isometric_high_path.exists():
+        raise FileNotFoundError(f'This file was not found: {isometric_high_path}')
+
+    if not isometric_low_path.exists():
+        raise FileNotFoundError(f'This file was not found: {isometric_low_path}')
+
+    isometric_high = read_and_preprocess_perturbation_file(
+        file_path=isometric_high_path,
+        sampling_frequency=sampling_frequency,
+        low_pass_filter_frequency=low_pass_filter_frequency
+    )
+
+    isometric_low = read_and_preprocess_perturbation_file(
+        file_path=isometric_low_path,
+        sampling_frequency=sampling_frequency,
+        low_pass_filter_frequency=low_pass_filter_frequency
+    )
+
+    return upward_trials, downward_trials, isometric_high, isometric_low
+
+
+def calculate_isometric_thresholds(isometric_high, isometric_low, time_threshold):
+    """
+    Calculates the mean and SD of spatial error from the isometric trials.
+    """
+    isometric_high = isometric_high[isometric_high['Time'] > time_threshold].reset_index(drop=True).copy()
+    isometric_low = isometric_low[isometric_low['Time'] > time_threshold].reset_index(drop=True).copy()
+
+    spatial_errors_high = lb.spatial_error(isometric_high)
+    spatial_errors_low = lb.spatial_error(isometric_low)
+
+    mean_spatial_error_high = np.mean(spatial_errors_high)
+    mean_spatial_error_low = np.mean(spatial_errors_low)
+
+    sd_spatial_error_high = np.std(spatial_errors_high)
+    sd_spatial_error_low = np.std(spatial_errors_low)
+
+    return {
+        'mean_high': mean_spatial_error_high,
+        'sd_high': sd_spatial_error_high,
+        'mean_low': mean_spatial_error_low,
+        'sd_low': sd_spatial_error_low
+    }
+
+
+def analyze_perturbation_trial(df, sd_factor, time_window, name, mean_spatial_error_isometric_trials, sd_spatial_error_isometric_trials):
+    """
+    Recreates the SD adaptation logic and returns everything needed for Plotly plotting.
+    """
+    df = df.copy()
+    df = lb.synchronization_of_Time_and_ClosestSampleTime_Anestis(df)
+
+    target_change_indices = df[df['Target'] != df['Target'].shift(1)].index.tolist()
+
+    if len(target_change_indices) < 2:
+        perturbation_index = target_change_indices[0]
+    else:
+        perturbation_index = target_change_indices[1]
+
+    spatial_er = lb.spatial_error(df)
+
+    mean_isometric_trial = mean_spatial_error_isometric_trials
+    sd_isometric_trial = sd_spatial_error_isometric_trials
+    threshold = mean_isometric_trial + (sd_isometric_trial * sd_factor)
+
+    time_shifted = (df['Time'] - df['Time'].iloc[perturbation_index]).to_numpy()
+
+    time_of_adaptation_sd = None
+    time_until_spatial_error_is_lower_than_threshold = None
+
+    target_time = df['Time'].iloc[-1] - time_window
+    idx = (df['Time'] - target_time).abs().idxmin()
+    pos_idx = df.index.get_loc(idx)
+    last_pos = len(df) - 1
+    last_index_of_iteration = last_pos - pos_idx
+
+    for i in range(len(spatial_er) - last_index_of_iteration):
+        if i >= perturbation_index:
+            start_time_window_position = i
+            end_time_window = df['Time'].iloc[start_time_window_position] + time_window
+
+            if end_time_window > df['Time'].iloc[-1]:
+                break
+
+            end_idx_label = (df['Time'] - end_time_window).abs().idxmin()
+            end_time_window_position = df.index.get_loc(end_idx_label)
+
+            consecutive_values = end_time_window_position - start_time_window_position
+
+            if consecutive_values <= 0:
+                continue
+
+            consecutive_values_list = np.arange(0, consecutive_values, 1)
+
+            if all(
+                spatial_er[i + j] < threshold
+                for j in consecutive_values_list
+            ):
+                time_of_adaptation_sd = df['Time'].iloc[i] - df['Time'].iloc[perturbation_index]
+                time_until_spatial_error_is_lower_than_threshold = (
+                    df['Time'].iloc[end_time_window_position] - df['Time'].iloc[perturbation_index]
+                )
+                break
+
+    return {
+        'name': name,
+        'df': df,
+        'spatial_error': spatial_er,
+        'time_shifted': time_shifted,
+        'perturbation_index': perturbation_index,
+        'threshold': threshold,
+        'mean_isometric_trial': mean_isometric_trial,
+        'sd_isometric_trial': sd_isometric_trial,
+        'time_of_adaptation_sd': time_of_adaptation_sd,
+        'time_until_spatial_error_is_lower_than_threshold': time_until_spatial_error_is_lower_than_threshold
+    }
+
+
+def analyze_perturbation_group(trials, sd_factor, time_window, mean_spatial_error_isometric_trials, sd_spatial_error_isometric_trials, direction):
+    """
+    Applies the perturbation analysis to all trials of one group.
+    """
+    analyzed_trials = []
+
+    for trial in trials:
+        result = analyze_perturbation_trial(
+            df=trial['df'],
+            sd_factor=sd_factor,
+            time_window=time_window,
+            name=trial['name'],
+            mean_spatial_error_isometric_trials=mean_spatial_error_isometric_trials,
+            sd_spatial_error_isometric_trials=sd_spatial_error_isometric_trials
+        )
+
+        result['phase'] = trial['phase']
+        result['trial_number'] = trial['trial_number']
+        result['direction'] = direction
+        result['plot_key'] = f"{direction}_{trial['phase']}_{trial['trial_number']}"
+
+        analyzed_trials.append(result)
+
+    analyzed_trials = sorted(
+        analyzed_trials,
+        key=lambda x: (0 if x['phase'] == 'Pre' else 1, x['trial_number'])
+    )
+
+    return analyzed_trials
+
+def create_perturbation_figure(analyzed_trials, figure_title):
+    """
+    Creates a 2 x 3 Plotly figure:
+    Row 1 = Pre
+    Row 2 = Post
+    Columns = trials 1, 2, 3
+    """
+    subplot_titles = []
+
+    for result in analyzed_trials:
+        if result['time_of_adaptation_sd'] is None:
+            subtitle = f"{result['phase']} {result['trial_number']}<br>No adaptation"
+        else:
+            subtitle = f"{result['phase']} {result['trial_number']}<br>t = {result['time_of_adaptation_sd']:.2f} s"
+
+        subplot_titles.append(subtitle)
+
+    fig = make_subplots(
+        rows=2,
+        cols=3,
+        subplot_titles=subplot_titles,
+        vertical_spacing=0.12,
+        horizontal_spacing=0.08
+    )
+
+    for i, result in enumerate(analyzed_trials):
+        row = 1 if result['phase'] == 'Pre' else 2
+        col = result['trial_number']
+
+        x = result['time_shifted']
+        y = result['spatial_error']
+        threshold = result['threshold']
+        adaptation_time = result['time_of_adaptation_sd']
+        check_window_end = result['time_until_spatial_error_is_lower_than_threshold']
+        plot_key = result['plot_key']
+
+        y_max = np.nanmax([np.nanmax(y), threshold]) * 1.10
+        if y_max <= 0:
+            y_max = 1
+
+        show_legend = True if i == 0 else False
+
+        fig.add_trace(
+            go.Scatter(
+                x=x,
+                y=y,
+                mode='lines',
+                name='Spatial Error',
+                legendgroup='Spatial Error',
+                showlegend=show_legend,
+                line=dict(color=perturbation_spatial_error_color),
+                customdata=[plot_key] * len(x),
+                hovertemplate='Time: %{x}<br>Spatial Error: %{y}<extra></extra>'
+            ),
+            row=row,
+            col=col
+        )
+
+        fig.add_trace(
+            go.Scatter(
+                x=[x[0], x[-1]],
+                y=[threshold, threshold],
+                mode='lines',
+                name='Threshold',
+                legendgroup='Threshold',
+                showlegend=show_legend,
+                line=dict(color=perturbation_threshold_color, dash='dot', width=3),
+                hovertemplate='Threshold: %{y}<extra></extra>'
+            ),
+            row=row,
+            col=col
+        )
+
+        fig.add_trace(
+            go.Scatter(
+                x=[0, 0],
+                y=[0, y_max],
+                mode='lines',
+                name='Perturbation instance',
+                legendgroup='Perturbation instance',
+                showlegend=show_legend,
+                line=dict(color=perturbation_instance_color, dash='dash', width=3),
+                hoverinfo='skip'
+            ),
+            row=row,
+            col=col
+        )
+
+        if adaptation_time is not None:
+            fig.add_trace(
+                go.Scatter(
+                    x=[adaptation_time, adaptation_time],
+                    y=[0, y_max],
+                    mode='lines',
+                    name='Adaptation instance',
+                    legendgroup='Adaptation instance',
+                    showlegend=show_legend,
+                    line=dict(color=perturbation_adaptation_color, width=3),
+                    hoverinfo='skip'
+                ),
+                row=row,
+                col=col
+            )
+
+            if check_window_end is not None:
+                fig.add_vrect(
+                    x0=adaptation_time,
+                    x1=check_window_end,
+                    fillcolor='gray',
+                    opacity=0.25,
+                    line_width=0,
+                    row=row,
+                    col=col
+                )
+
+        fig.update_xaxes(title_text='Time (sec)', row=row, col=col)
+        fig.update_yaxes(title_text='Force difference (kg)', row=row, col=col)
+
+    fig.update_layout(
+        title=dict(
+            text=figure_title,
+            x=0.5,
+            xanchor='center'
+        ),
+        height=900,
+        width=1300,
+        template='plotly_white',
+        hovermode='x unified',
+        legend=dict(
+            orientation='h',
+            yanchor='bottom',
+            y=1.05,
+            xanchor='center',
+            x=0.5
+        ),
+        margin=dict(t=160, l=70, r=40, b=70)
+    )
+
+    fig.add_annotation(
+        text='Pre',
+        xref='paper',
+        yref='paper',
+        x=-0.06,
+        y=0.80,
+        showarrow=False,
+        textangle=-90,
+        font=dict(size=16)
+    )
+
+    fig.add_annotation(
+        text='Post',
+        xref='paper',
+        yref='paper',
+        x=-0.06,
+        y=0.22,
+        showarrow=False,
+        textangle=-90,
+        font=dict(size=16)
+    )
+
+    return fig
+
+
 def read_training_file(file_path):
     """
     Reads and synchronizes one training file.
@@ -453,16 +915,529 @@ def create_popup_javascript(spatial_error_data):
     return javascript
 
 
+def create_perturbation_force_target_popup_javascript(perturbation_force_target_data):
+    """
+    Creates JavaScript that opens the hidden Performance + Target graph
+    when a perturbation spatial-error subplot is clicked.
+    """
+    perturbation_force_target_json = json.dumps(perturbation_force_target_data)
+
+    javascript = f"""
+    <script>
+        const perturbationForceTargetData = {perturbation_force_target_json};
+
+        const upwardPerturbationPlot = document.getElementById('upward_perturbations_plot');
+        const downwardPerturbationPlot = document.getElementById('downward_perturbations_plot');
+
+        const perturbationForceTargetModal = document.getElementById('perturbation-force-target-modal');
+        const closePerturbationForceTargetButton = document.getElementById('close-perturbation-force-target-modal');
+
+        function showPerturbationForceTargetGraph(plotKey) {{
+            const trialData = perturbationForceTargetData[plotKey];
+
+            if (!trialData) {{
+                alert('No Performance/Target data found for this perturbation.');
+                return;
+            }}
+
+            document.getElementById('perturbation-force-target-title').innerText =
+                trialData.Direction + ' Perturbation - ' + trialData.Phase + ' Trial ' + trialData.Trial_Number;
+
+            const performanceTrace = {{
+                x: trialData.Force_Time,
+                y: trialData.Performance,
+                mode: 'lines',
+                type: 'scatter',
+                name: 'Force Output',
+                line: {{
+                    color: '{force_color}'
+                }},
+                hovertemplate: 'Time: %{{x}}<br>Force Output: %{{y}}<extra></extra>'
+            }};
+
+            const targetTrace = {{
+                x: trialData.Target_Time,
+                y: trialData.Target,
+                mode: 'lines',
+                type: 'scatter',
+                name: 'Target',
+                line: {{
+                    color: '{target_color}'
+                }},
+                hovertemplate: 'Time: %{{x}}<br>Target: %{{y}}<extra></extra>'
+            }};
+
+            const layout = {{
+                title: {{
+                    text: trialData.Name,
+                    x: 0.5,
+                    xanchor: 'center'
+                }},
+                height: 550,
+                template: 'plotly_white',
+                hovermode: 'x unified',
+                xaxis: {{
+                    title: 'Time from perturbation (sec)'
+                }},
+                yaxis: {{
+                    title: 'Force'
+                }},
+                legend: {{
+                    orientation: 'h',
+                    yanchor: 'bottom',
+                    y: 1.03,
+                    xanchor: 'center',
+                    x: 0.5
+                }},
+                margin: {{
+                    t: 100,
+                    l: 70,
+                    r: 40,
+                    b: 60
+                }}
+            }};
+
+            const config = {{
+                scrollZoom: true,
+                displayModeBar: true,
+                responsive: true
+            }};
+
+            Plotly.newPlot(
+                'perturbation-force-target-plot',
+                [performanceTrace, targetTrace],
+                layout,
+                config
+            );
+
+            perturbationForceTargetModal.style.display = 'block';
+        }}
+
+        function connectPerturbationClick(plotElement) {{
+            if (!plotElement) {{
+                return;
+            }}
+
+            plotElement.on('plotly_click', function(clickData) {{
+                if (!clickData.points || clickData.points.length === 0) {{
+                    return;
+                }}
+
+                const clickedPoint = clickData.points[0];
+                const plotKey = clickedPoint.customdata;
+
+                if (!plotKey) {{
+                    return;
+                }}
+
+                showPerturbationForceTargetGraph(plotKey);
+            }});
+        }}
+
+        connectPerturbationClick(upwardPerturbationPlot);
+        connectPerturbationClick(downwardPerturbationPlot);
+
+        closePerturbationForceTargetButton.onclick = function() {{
+            perturbationForceTargetModal.style.display = 'none';
+        }};
+
+        window.addEventListener('click', function(event) {{
+            if (event.target === perturbationForceTargetModal) {{
+                perturbationForceTargetModal.style.display = 'none';
+            }}
+        }});
+
+        document.addEventListener('keydown', function(event) {{
+            if (event.key === 'Escape') {{
+                perturbationForceTargetModal.style.display = 'none';
+            }}
+        }});
+    </script>
+    """
+
+    return javascript
+
+
+def to_numpy_1d(x):
+    """
+    Converts pandas Series, lists, or arrays to a 1D numpy array.
+    """
+    if hasattr(x, "to_numpy"):
+        return np.asarray(x.to_numpy()).ravel()
+
+    return np.asarray(x).ravel()
+
+
+def process_one_stacked_signal(y, padding_percent, center_method):
+    """
+    Centers and prepares one signal for stacked plotting.
+    """
+    y = to_numpy_1d(y).astype(float)
+
+    finite_mask = np.isfinite(y)
+
+    if not np.any(finite_mask):
+        raise ValueError("One signal contains no finite values.")
+
+    if center_method == "first":
+        first_value = y[finite_mask][0]
+        y = y - first_value
+
+    elif center_method == "mean":
+        y = y - np.nanmean(y)
+
+    y_min = np.nanmin(y)
+    y_max = np.nanmax(y)
+    y_range = y_max - y_min
+
+    if y_range == 0:
+        y_range = 1
+
+    padding = y_range * padding_percent / 100
+
+    return {
+        "y": y,
+        "local_min": y_min - padding,
+        "local_max": y_max + padding,
+        "local_range": y_range + 2 * padding
+    }
+
+
+def load_hemoglobin_training_sets(brain_directory, artinis_file_name):
+    """
+    Loads the Artinis file and keeps only the middle 10 events,
+    which correspond to the 10 training sets.
+    """
+    data, fs, list_indices, list_time_events, pre_event_indices, derived_end_indices, final_event_indices, list_training_sets = lb.artinis_read_file_22_events_plot(
+        brain_directory,
+        artinis_file_name
+    )
+
+    # Keep only the middle 10 training sets.
+    # This removes the first 6 and last 6 events.
+    list_training_sets = list_training_sets[6:-6]
+
+    if len(list_training_sets) != number_of_training_sets:
+        raise ValueError(
+            f"Expected {number_of_training_sets} hemoglobin training sets, "
+            f"but found {len(list_training_sets)} after list_training_sets[6:-6]."
+        )
+
+    return data, fs, list_training_sets
+
+
+def extract_filtered_o2hb_signals(brain_data, fs):
+    """
+    Extracts and band-pass filters the six O2Hb signals.
+    """
+    left_Rx1_Tx1_O2Hb = brain_data['[9322] Rx1 - Tx1  O2Hb'].to_numpy()
+    left_Rx1_Tx2_O2Hb = brain_data['[9322] Rx1 - Tx2  O2Hb'].to_numpy()
+    left_Rx1_Tx3_O2Hb = brain_data['[9322] Rx1 - Tx3  O2Hb'].to_numpy()
+
+    right_Rx3_Tx4_O2Hb = brain_data['[9323] Rx3 - Tx4  O2Hb'].to_numpy()
+    right_Rx3_Tx5_O2Hb = brain_data['[9323] Rx3 - Tx5  O2Hb'].to_numpy()
+    right_Rx3_Tx6_O2Hb = brain_data['[9323] Rx3 - Tx6  O2Hb'].to_numpy()
+
+    left_Rx1_Tx1_O2Hb = lb.butter_bandpass_filtfilt_SOS(
+        left_Rx1_Tx1_O2Hb,
+        fs,
+        low=hemoglobin_low_frequency,
+        high=hemoglobin_high_frequency,
+        order=hemoglobin_filter_order,
+        plot=False,
+        demean=False
+    )
+
+    left_Rx1_Tx2_O2Hb = lb.butter_bandpass_filtfilt_SOS(
+        left_Rx1_Tx2_O2Hb,
+        fs,
+        low=hemoglobin_low_frequency,
+        high=hemoglobin_high_frequency,
+        order=hemoglobin_filter_order,
+        plot=False,
+        demean=False
+    )
+
+    left_Rx1_Tx3_O2Hb = lb.butter_bandpass_filtfilt_SOS(
+        left_Rx1_Tx3_O2Hb,
+        fs,
+        low=hemoglobin_low_frequency,
+        high=hemoglobin_high_frequency,
+        order=hemoglobin_filter_order,
+        plot=False,
+        demean=False
+    )
+
+    right_Rx3_Tx4_O2Hb = lb.butter_bandpass_filtfilt_SOS(
+        right_Rx3_Tx4_O2Hb,
+        fs,
+        low=hemoglobin_low_frequency,
+        high=hemoglobin_high_frequency,
+        order=hemoglobin_filter_order,
+        plot=False,
+        demean=False
+    )
+
+    right_Rx3_Tx5_O2Hb = lb.butter_bandpass_filtfilt_SOS(
+        right_Rx3_Tx5_O2Hb,
+        fs,
+        low=hemoglobin_low_frequency,
+        high=hemoglobin_high_frequency,
+        order=hemoglobin_filter_order,
+        plot=False,
+        demean=False
+    )
+
+    right_Rx3_Tx6_O2Hb = lb.butter_bandpass_filtfilt_SOS(
+        right_Rx3_Tx6_O2Hb,
+        fs,
+        low=hemoglobin_low_frequency,
+        high=hemoglobin_high_frequency,
+        order=hemoglobin_filter_order,
+        plot=False,
+        demean=False
+    )
+
+    signal_dict = {
+        "Left Rx1-Tx1 O2Hb": left_Rx1_Tx1_O2Hb,
+        "Left Rx1-Tx2 O2Hb": left_Rx1_Tx2_O2Hb,
+        "Left Rx1-Tx3 O2Hb": left_Rx1_Tx3_O2Hb,
+        "Right Rx3-Tx4 O2Hb": right_Rx3_Tx4_O2Hb,
+        "Right Rx3-Tx5 O2Hb": right_Rx3_Tx5_O2Hb,
+        "Right Rx3-Tx6 O2Hb": right_Rx3_Tx6_O2Hb
+    }
+
+    return signal_dict
+
+
+def create_force_and_stacked_o2hb_figure(time, signal_dict, force_data, set_number, training_start_sec=10, force_duration=30, force_time_col=None, performance_col="Performance", target_col="Target", padding_percent=10, gap_percent=1, center_method="first", title="Force tracking and O2Hb response", line_width=1.5):
+    """
+    Creates one Plotly figure with stacked O2Hb signals and force tracking.
+    """
+    time = to_numpy_1d(time).astype(float)
+    time = time - time[0]
+
+    performance = to_numpy_1d(force_data[performance_col]).astype(float)
+    target = to_numpy_1d(force_data[target_col]).astype(float)
+
+    if len(performance) != len(target):
+        raise ValueError("Performance and Target have different lengths.")
+
+    if force_time_col is not None:
+        force_time = to_numpy_1d(force_data[force_time_col]).astype(float)
+        force_time = force_time - force_time[0]
+    else:
+        force_time = np.linspace(0, force_duration, len(performance), endpoint=False)
+
+    force_time = force_time + training_start_sec
+
+    fig = go.Figure()
+
+    groups = []
+
+    for signal_name, y in signal_dict.items():
+        y = to_numpy_1d(y).astype(float)
+
+        if len(y) != len(time):
+            raise ValueError(f"{signal_name} has a different length than time.")
+
+        processed = process_one_stacked_signal(
+            y=y,
+            padding_percent=padding_percent,
+            center_method=center_method
+        )
+
+        groups.append({
+            "name": signal_name,
+            "type": "single",
+            "time": time,
+            "signals": {
+                signal_name: processed["y"]
+            },
+            "local_min": processed["local_min"],
+            "local_max": processed["local_max"],
+            "local_range": processed["local_range"]
+        })
+
+    force_min = np.nanmin([np.nanmin(performance), np.nanmin(target)])
+    force_max = np.nanmax([np.nanmax(performance), np.nanmax(target)])
+    force_range = force_max - force_min
+
+    if force_range == 0:
+        force_range = 1
+
+    force_padding = force_range * padding_percent / 100
+
+    groups.append({
+        "name": "Force tracking",
+        "type": "force",
+        "time": force_time,
+        "signals": {
+            "Performance": performance,
+            "Target": target
+        },
+        "local_min": force_min - force_padding,
+        "local_max": force_max + force_padding,
+        "local_range": force_range + 2 * force_padding
+    })
+
+    current_bottom = 0
+    final_top = 0
+
+    x_start = 0
+    x_end = max(time[-1], force_time[-1])
+    x_range = x_end - x_start
+    label_x_position = x_end + x_range * 0.02
+
+    for group in groups:
+        local_min = group["local_min"]
+        local_range = group["local_range"]
+        vertical_shift = current_bottom - local_min
+
+        for signal_name, y in group["signals"].items():
+            y_offset = y + vertical_shift
+
+            if group["type"] == "force" and signal_name == "Target":
+                line_style = dict(color=target_color, width=2, dash="dash")
+                trace_name = "Target"
+
+            elif group["type"] == "force" and signal_name == "Performance":
+                line_style = dict(color=force_color, width=2)
+                trace_name = "Force Output"
+
+            else:
+                line_style = dict(width=line_width)
+                trace_name = group["name"]
+
+            fig.add_trace(
+                go.Scatter(
+                    x=group["time"],
+                    y=y_offset,
+                    mode="lines",
+                    name=trace_name,
+                    line=line_style,
+                    showlegend=True if group["type"] == "force" else False,
+                    hovertemplate=(
+                        "Time: %{x}<br>"
+                        f"{trace_name}: " + "%{y}<extra></extra>"
+                    )
+                )
+            )
+
+        fig.add_annotation(
+            x=label_x_position,
+            y=current_bottom + local_range / 2,
+            text=group["name"],
+            showarrow=False,
+            xanchor="left",
+            yanchor="middle",
+            font=dict(size=12)
+        )
+
+        final_top = current_bottom + local_range
+        gap = local_range * gap_percent / 100
+        current_bottom = final_top + gap
+
+    fig.add_vrect(
+        x0=0,
+        x1=training_start_sec,
+        fillcolor="lightgray",
+        opacity=0.20,
+        line_width=0
+    )
+
+    fig.add_vline(
+        x=training_start_sec,
+        line_width=2,
+        line_dash="dash"
+    )
+
+    fig.add_annotation(
+        x=training_start_sec,
+        y=final_top,
+        text="Training starts",
+        showarrow=False,
+        xanchor="left",
+        yanchor="bottom",
+        font=dict(size=13)
+    )
+
+    fig.update_yaxes(
+        showticklabels=False,
+        ticks="",
+        showgrid=False,
+        title_text="Stacked signals"
+    )
+
+    fig.update_xaxes(
+        title_text="Time (s)",
+        range=[x_start, x_end + x_range * 0.18]
+    )
+
+    fig.update_layout(
+        title=dict(
+            text=title,
+            x=0.5,
+            xanchor="center"
+        ),
+        height=max(700, 320 + len(groups) * 100),
+        width=1400,
+        margin=dict(l=80, r=260, t=90, b=70),
+        template="plotly_white",
+        hovermode="x unified",
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.03,
+            xanchor="center",
+            x=0.5
+        )
+    )
+
+    return fig
+
+
+def create_all_hemoglobin_training_figures(training_sets, hemoglobin_training_sets, fs):
+    """
+    Creates one stacked O2Hb + force tracking figure for each training set.
+    """
+    hemoglobin_figures = []
+
+    for i in range(len(hemoglobin_training_sets)):
+        force_data = training_sets[i]
+        brain_data = hemoglobin_training_sets[i]
+
+        time = brain_data['Time'].to_numpy()
+        time = time - time[0]
+
+        signal_dict = extract_filtered_o2hb_signals(
+            brain_data=brain_data,
+            fs=fs
+        )
+
+        fig = create_force_and_stacked_o2hb_figure(
+            time=time,
+            signal_dict=signal_dict,
+            force_data=force_data,
+            set_number=i + 1,
+            training_start_sec=hemoglobin_training_start_sec,
+            force_duration=hemoglobin_force_duration,
+            padding_percent=hemoglobin_padding_percent,
+            gap_percent=hemoglobin_gap_percent,
+            center_method=hemoglobin_center_method,
+            title=f"Set {i + 1}: Force tracking and O2Hb response"
+        )
+
+        hemoglobin_figures.append(fig)
+
+    return hemoglobin_figures
 # =========================
 # LOAD DATA
 # =========================
 print(f'Participant ID: {ID}')
 print(f'Reading files from: {grip_directory}')
 
-training_sets = load_all_training_sets(
-    grip_directory=grip_directory,
-    number_of_training_sets=number_of_training_sets
-)
+training_sets = load_all_training_sets(grip_directory=grip_directory, number_of_training_sets=number_of_training_sets)
 
 
 # =========================
@@ -473,6 +1448,68 @@ spatial_error_sets = calculate_spatial_error_for_all_sets(training_sets)
 spatial_error_summary_df = calculate_spatial_error_summary(spatial_error_sets)
 
 spatial_error_data = create_spatial_error_data_for_javascript(spatial_error_sets)
+
+# =========================
+# LOAD AND ANALYZE PERTURBATIONS
+# =========================
+upward_trials, downward_trials, isometric_high, isometric_low = load_perturbation_trials(
+    grip_directory=grip_directory,
+    sampling_frequency=sampling_frequency,
+    low_pass_filter_frequency=low_pass_filter_frequency
+)
+
+isometric_thresholds = calculate_isometric_thresholds(
+    isometric_high=isometric_high,
+    isometric_low=isometric_low,
+    time_threshold=time_threshold
+)
+
+upward_perturbation_results = analyze_perturbation_group(
+    trials=upward_trials,
+    sd_factor=sd_factor,
+    time_window=time_window,
+    mean_spatial_error_isometric_trials=isometric_thresholds['mean_high'],
+    sd_spatial_error_isometric_trials=isometric_thresholds['sd_high'],
+    direction='Upward'
+)
+
+downward_perturbation_results = analyze_perturbation_group(
+    trials=downward_trials,
+    sd_factor=sd_factor,
+    time_window=time_window,
+    mean_spatial_error_isometric_trials=isometric_thresholds['mean_low'],
+    sd_spatial_error_isometric_trials=isometric_thresholds['sd_low'],
+    direction='Downward'
+)
+
+upward_perturbations_fig = create_perturbation_figure(
+    analyzed_trials=upward_perturbation_results,
+    figure_title=f'{ID} - Upward Perturbations'
+)
+
+downward_perturbations_fig = create_perturbation_figure(
+    analyzed_trials=downward_perturbation_results,
+    figure_title=f'{ID} - Downward Perturbations'
+)
+
+perturbation_force_target_data = create_perturbation_force_target_data_for_javascript(
+    upward_perturbation_results=upward_perturbation_results,
+    downward_perturbation_results=downward_perturbation_results
+)
+
+# =========================
+# LOAD AND CREATE HEMOGLOBIN FIGURES
+# =========================
+hemoglobin_data, hemoglobin_fs, hemoglobin_training_sets = load_hemoglobin_training_sets(
+    brain_directory=brain_directory,
+    artinis_file_name=artinis_file_name
+)
+
+hemoglobin_training_figures = create_all_hemoglobin_training_figures(
+    training_sets=training_sets,
+    hemoglobin_training_sets=hemoglobin_training_sets,
+    fs=hemoglobin_fs
+)
 
 
 # =========================
@@ -568,6 +1605,26 @@ html_parts.append(f"""
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
             page-break-before: always;
         }}
+        
+                .new-report-page {{
+            background: white;
+            padding: 25px;
+            margin-bottom: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            page-break-before: always;
+        }}
+
+        .brain-figure-subsection {{
+            border-top: 1px solid #ddd;
+            padding-top: 20px;
+            margin-top: 30px;
+        }}
+
+        .small-text {{
+            font-size: 14px;
+            color: #666;
+        }}
 
         .small-text {{
             font-size: 14px;
@@ -640,6 +1697,9 @@ html_parts.append(f"""
             <li><a href="#basic-information">Basic Information</a></li>
             <li><a href="#training-section">Training Sets Overview</a></li>
             <li><a href="#spatial-error-summary-section">Spatial Error Summary</a></li>
+            <li><a href="#upward-perturbations-section">Upward Perturbations</a></li>
+            <li><a href="#downward-perturbations-section">Downward Perturbations</a></li>
+            <li><a href="#hemoglobin-training-section">Hemoglobin activity during training sets</a></li>
         </ul>
     </section>
 
@@ -701,6 +1761,114 @@ add_plotly_figure_to_report(
     page_class='new-report-page'
 )
 
+# =========================
+# PAGE 3: UPWARD PERTURBATIONS
+# =========================
+html_parts.append("""
+    <section id="upward-perturbations-section" class="new-report-page">
+        <h2>Upward Perturbations</h2>
+        <p class="small-text">
+            Row 1 shows the pre-training perturbations and Row 2 shows the post-training perturbations.
+            Columns 1 to 3 correspond to trials 1 to 3.
+            The dotted horizontal line is the threshold from the high isometric trial.
+            The red vertical line is the adaptation instance.
+        </p>
+""")
+
+upward_perturbations_fig_html = pio.to_html(
+    upward_perturbations_fig,
+    full_html=False,
+    include_plotlyjs=False,
+    div_id='upward_perturbations_plot',
+    config={
+        'scrollZoom': True,
+        'displayModeBar': True,
+        'responsive': True
+    }
+)
+
+html_parts.append(upward_perturbations_fig_html)
+
+html_parts.append("""
+        <p class="back-to-top"><a href="#top">Back to top</a></p>
+    </section>
+""")
+
+
+# =========================
+# PAGE 4: DOWNWARD PERTURBATIONS
+# =========================
+html_parts.append("""
+    <section id="downward-perturbations-section" class="new-report-page">
+        <h2>Downward Perturbations</h2>
+        <p class="small-text">
+            Row 1 shows the pre-training perturbations and Row 2 shows the post-training perturbations.
+            Columns 1 to 3 correspond to trials 1 to 3.
+            The dotted horizontal line is the threshold from the low isometric trial.
+            The red vertical line is the adaptation instance.
+        </p>
+""")
+
+downward_perturbations_fig_html = pio.to_html(
+    downward_perturbations_fig,
+    full_html=False,
+    include_plotlyjs=False,
+    div_id='downward_perturbations_plot',
+    config={
+        'scrollZoom': True,
+        'displayModeBar': True,
+        'responsive': True
+    }
+)
+
+html_parts.append(downward_perturbations_fig_html)
+
+html_parts.append("""
+        <p class="back-to-top"><a href="#top">Back to top</a></p>
+    </section>
+""")
+
+# =========================
+# PAGE 5: HEMOGLOBIN ACTIVITY DURING TRAINING SETS
+# =========================
+html_parts.append("""
+    <section id="hemoglobin-training-section" class="new-report-page">
+        <h2>Hemoglobin activity during training sets</h2>
+        <p class="small-text">
+            Each graph shows the six filtered O2Hb channels together with the force tracking signal.
+            The first 10 seconds are shown before the force-tracking task starts.
+            The vertical dashed line indicates the start of the training set.
+        </p>
+""")
+
+for i, fig in enumerate(hemoglobin_training_figures, start=1):
+    html_parts.append(f"""
+        <div class="brain-figure-subsection">
+            <h3>Training Set {i}</h3>
+    """)
+
+    fig_html = pio.to_html(
+        fig,
+        full_html=False,
+        include_plotlyjs=False,
+        div_id=f'hemoglobin_training_set_{i}_plot',
+        config={
+            'scrollZoom': True,
+            'displayModeBar': True,
+            'responsive': True
+        }
+    )
+
+    html_parts.append(fig_html)
+
+    html_parts.append("""
+        </div>
+    """)
+
+html_parts.append("""
+        <p class="back-to-top"><a href="#top">Back to top</a></p>
+    </section>
+""")
 
 # =========================
 # HIDDEN SPATIAL ERROR POPUP
@@ -717,9 +1885,29 @@ html_parts.append("""
 
 
 # =========================
+# HIDDEN PERTURBATION PERFORMANCE/TARGET POPUP
+# =========================
+html_parts.append("""
+    <div id="perturbation-force-target-modal" class="modal">
+        <div class="modal-content">
+            <span id="close-perturbation-force-target-modal" class="close-button">&times;</span>
+            <h2 id="perturbation-force-target-title">Perturbation Force and Target</h2>
+            <div id="perturbation-force-target-plot"></div>
+        </div>
+    </div>
+""")
+
+
+# =========================
 # JAVASCRIPT FOR CLICK POPUP
 # =========================
 html_parts.append(create_popup_javascript(spatial_error_data))
+
+html_parts.append(
+    create_perturbation_force_target_popup_javascript(
+        perturbation_force_target_data=perturbation_force_target_data
+    )
+)
 
 
 # =========================

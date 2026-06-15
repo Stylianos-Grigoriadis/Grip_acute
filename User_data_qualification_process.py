@@ -14,12 +14,32 @@ from plotly.subplots import make_subplots
 
 plt.rcParams['font.family'] = 'serif'        # e.g., 'serif', 'sans-serif', 'monospace'
 plt.rcParams['font.size'] = 16
-directory = r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Data to screen\Sine_1'
+
+# Participants information
+ID = "Sine_1"
+information = pd.read_excel(r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Signals\Participants.xlsx')
+matching_row = information.loc[information["ID"] == ID]
+date_of_collection = matching_row.iloc[0, 2]
+date_of_collection = date_of_collection.date()
+age = matching_row.iloc[0, 3]
+weight = matching_row.iloc[0, 4]
+height = matching_row.iloc[0, 5]
+MVC = matching_row.iloc[0, 6]
+dominant_hand = matching_row.iloc[0, 7]
+
+print(date_of_collection)
+print(str(round(age)) + " years old")
+print(str(round(weight)) + " kg")
+print(str(round(height)) + " cm")
+print(str(round(MVC*9.81)) + "N")
+print(str(dominant_hand) + " dominant arm")
+
+
+directory = r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Data to screen'
+directory = os.path.join(directory, ID)
 os.chdir(directory)
 
 parts = directory.split(os.sep)
-ID = parts[-1]
-print(ID)
 
 grip_directory = directory + r'\Grip data'
 os.chdir(grip_directory)

@@ -11,7 +11,6 @@ from datetime import datetime
 from html import escape
 from plotly.subplots import make_subplots
 
-
 # =========================
 # SETTINGS
 # =========================
@@ -22,6 +21,10 @@ directory = Path(
 ID = directory.name
 grip_directory = directory / 'Grip data'
 
+participants_excel_path = Path(
+    r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Signals\Participants.xlsx'
+)
+
 number_of_training_sets = 10
 
 report_path = directory / f'{ID}_prequalification_report.html'
@@ -30,6 +33,7 @@ force_color = 'blue'
 target_color = 'red'
 spatial_error_color = 'black'
 spatial_error_band_color = 'rgba(0, 0, 0, 0.18)'
+
 
 # =========================
 # PERTURBATION SETTINGS
@@ -45,6 +49,7 @@ perturbation_threshold_color = 'black'
 perturbation_adaptation_color = 'red'
 perturbation_instance_color = 'gray'
 perturbation_window_color = 'rgba(128, 128, 128, 0.25)'
+
 
 # =========================
 # HEMOGLOBIN SETTINGS
@@ -67,6 +72,59 @@ hemoglobin_center_method = 'first'
 # =========================
 # FUNCTIONS
 # =========================
+def load_participant_information(participants_excel_path, ID):
+    """
+    Loads participant information from the Participants.xlsx file.
+    """
+    information = pd.read_excel(participants_excel_path)
+
+    matching_row = information.loc[information["ID"] == ID]
+
+    if matching_row.empty:
+        raise ValueError(f"No participant with ID '{ID}' was found in: {participants_excel_path}")
+
+    date_of_collection = matching_row.iloc[0, 2]
+
+    if hasattr(date_of_collection, "date"):
+        date_of_collection = date_of_collection.date()
+
+    age = matching_row.iloc[0, 3]
+    weight = matching_row.iloc[0, 4]
+    height = matching_row.iloc[0, 5]
+    MVC = matching_row.iloc[0, 6]
+    dominant_hand = matching_row.iloc[0, 7]
+
+    participant_information = {
+        "ID": str(ID),
+        "date_of_collection": str(date_of_collection),
+        "age": str(round(age)) + " years old",
+        "weight": str(round(weight)) + " kg",
+        "height": str(round(height)) + " cm",
+        "MVC": str(round(MVC * 9.81)) + "N",
+        "dominant_hand": str(dominant_hand)
+    }
+
+    return participant_information
+
+
+def create_participant_information_html(participant_information):
+    """
+    Creates the HTML text for the Basic Information section.
+    """
+    html = f"""
+        <pre style="font-family: Georgia, serif; font-size: 18px; line-height: 1.8;">
+ID:                 {escape(participant_information["ID"])}
+Date of collection: {escape(participant_information["date_of_collection"])}
+Age:                {escape(participant_information["age"])}
+Weight:             {escape(participant_information["weight"])}
+Height:             {escape(participant_information["height"])}
+MVC:                {escape(participant_information["MVC"])}
+Dominant arm:       {escape(participant_information["dominant_hand"])}
+        </pre>
+    """
+
+    return html
+
 
 def create_perturbation_force_target_data_for_javascript(upward_perturbation_results, downward_perturbation_results):
     """
@@ -333,6 +391,7 @@ def analyze_perturbation_group(trials, sd_factor, time_window, mean_spatial_erro
     )
 
     return analyzed_trials
+
 
 def create_perturbation_figure(analyzed_trials, figure_title):
     """
@@ -1113,8 +1172,6 @@ def load_hemoglobin_training_sets(brain_directory, artinis_file_name):
         artinis_file_name
     )
 
-    # Keep only the middle 10 training sets.
-    # This removes the first 6 and last 6 events.
     list_training_sets = list_training_sets[6:-6]
 
     if len(list_training_sets) != number_of_training_sets:
@@ -1138,65 +1195,13 @@ def extract_filtered_o2hb_signals(brain_data, fs):
     right_Rx3_Tx5_O2Hb = brain_data['[9323] Rx3 - Tx5  O2Hb'].to_numpy()
     right_Rx3_Tx6_O2Hb = brain_data['[9323] Rx3 - Tx6  O2Hb'].to_numpy()
 
-    left_Rx1_Tx1_O2Hb = lb.butter_bandpass_filtfilt_SOS(
-        left_Rx1_Tx1_O2Hb,
-        fs,
-        low=hemoglobin_low_frequency,
-        high=hemoglobin_high_frequency,
-        order=hemoglobin_filter_order,
-        plot=False,
-        demean=False
-    )
+    left_Rx1_Tx1_O2Hb = lb.butter_bandpass_filtfilt_SOS(left_Rx1_Tx1_O2Hb, fs, low=hemoglobin_low_frequency, high=hemoglobin_high_frequency, order=hemoglobin_filter_order, plot=False, demean=False)
+    left_Rx1_Tx2_O2Hb = lb.butter_bandpass_filtfilt_SOS(left_Rx1_Tx2_O2Hb, fs, low=hemoglobin_low_frequency, high=hemoglobin_high_frequency, order=hemoglobin_filter_order, plot=False, demean=False)
+    left_Rx1_Tx3_O2Hb = lb.butter_bandpass_filtfilt_SOS(left_Rx1_Tx3_O2Hb, fs, low=hemoglobin_low_frequency, high=hemoglobin_high_frequency, order=hemoglobin_filter_order, plot=False, demean=False)
 
-    left_Rx1_Tx2_O2Hb = lb.butter_bandpass_filtfilt_SOS(
-        left_Rx1_Tx2_O2Hb,
-        fs,
-        low=hemoglobin_low_frequency,
-        high=hemoglobin_high_frequency,
-        order=hemoglobin_filter_order,
-        plot=False,
-        demean=False
-    )
-
-    left_Rx1_Tx3_O2Hb = lb.butter_bandpass_filtfilt_SOS(
-        left_Rx1_Tx3_O2Hb,
-        fs,
-        low=hemoglobin_low_frequency,
-        high=hemoglobin_high_frequency,
-        order=hemoglobin_filter_order,
-        plot=False,
-        demean=False
-    )
-
-    right_Rx3_Tx4_O2Hb = lb.butter_bandpass_filtfilt_SOS(
-        right_Rx3_Tx4_O2Hb,
-        fs,
-        low=hemoglobin_low_frequency,
-        high=hemoglobin_high_frequency,
-        order=hemoglobin_filter_order,
-        plot=False,
-        demean=False
-    )
-
-    right_Rx3_Tx5_O2Hb = lb.butter_bandpass_filtfilt_SOS(
-        right_Rx3_Tx5_O2Hb,
-        fs,
-        low=hemoglobin_low_frequency,
-        high=hemoglobin_high_frequency,
-        order=hemoglobin_filter_order,
-        plot=False,
-        demean=False
-    )
-
-    right_Rx3_Tx6_O2Hb = lb.butter_bandpass_filtfilt_SOS(
-        right_Rx3_Tx6_O2Hb,
-        fs,
-        low=hemoglobin_low_frequency,
-        high=hemoglobin_high_frequency,
-        order=hemoglobin_filter_order,
-        plot=False,
-        demean=False
-    )
+    right_Rx3_Tx4_O2Hb = lb.butter_bandpass_filtfilt_SOS(right_Rx3_Tx4_O2Hb, fs, low=hemoglobin_low_frequency, high=hemoglobin_high_frequency, order=hemoglobin_filter_order, plot=False, demean=False)
+    right_Rx3_Tx5_O2Hb = lb.butter_bandpass_filtfilt_SOS(right_Rx3_Tx5_O2Hb, fs, low=hemoglobin_low_frequency, high=hemoglobin_high_frequency, order=hemoglobin_filter_order, plot=False, demean=False)
+    right_Rx3_Tx6_O2Hb = lb.butter_bandpass_filtfilt_SOS(right_Rx3_Tx6_O2Hb, fs, low=hemoglobin_low_frequency, high=hemoglobin_high_frequency, order=hemoglobin_filter_order, plot=False, demean=False)
 
     signal_dict = {
         "Left Rx1-Tx1 O2Hb": left_Rx1_Tx1_O2Hb,
@@ -1431,13 +1436,23 @@ def create_all_hemoglobin_training_figures(training_sets, hemoglobin_training_se
         hemoglobin_figures.append(fig)
 
     return hemoglobin_figures
+
+
 # =========================
 # LOAD DATA
 # =========================
 print(f'Participant ID: {ID}')
 print(f'Reading files from: {grip_directory}')
 
-training_sets = load_all_training_sets(grip_directory=grip_directory, number_of_training_sets=number_of_training_sets)
+participant_information = load_participant_information(
+    participants_excel_path=participants_excel_path,
+    ID=ID
+)
+
+training_sets = load_all_training_sets(
+    grip_directory=grip_directory,
+    number_of_training_sets=number_of_training_sets
+)
 
 
 # =========================
@@ -1448,6 +1463,7 @@ spatial_error_sets = calculate_spatial_error_for_all_sets(training_sets)
 spatial_error_summary_df = calculate_spatial_error_summary(spatial_error_sets)
 
 spatial_error_data = create_spatial_error_data_for_javascript(spatial_error_sets)
+
 
 # =========================
 # LOAD AND ANALYZE PERTURBATIONS
@@ -1497,6 +1513,7 @@ perturbation_force_target_data = create_perturbation_force_target_data_for_javas
     downward_perturbation_results=downward_perturbation_results
 )
 
+
 # =========================
 # LOAD AND CREATE HEMOGLOBIN FIGURES
 # =========================
@@ -1544,6 +1561,11 @@ html_parts.append(f"""
         h2 {{
             font-size: 26px;
             margin-top: 10px;
+        }}
+
+        h3 {{
+            font-size: 22px;
+            margin-top: 20px;
         }}
 
         .subtitle {{
@@ -1605,25 +1627,11 @@ html_parts.append(f"""
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
             page-break-before: always;
         }}
-        
-                .new-report-page {{
-            background: white;
-            padding: 25px;
-            margin-bottom: 30px;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            page-break-before: always;
-        }}
 
         .brain-figure-subsection {{
             border-top: 1px solid #ddd;
             padding-top: 20px;
             margin-top: 30px;
-        }}
-
-        .small-text {{
-            font-size: 14px;
-            color: #666;
         }}
 
         .small-text {{
@@ -1705,9 +1713,7 @@ html_parts.append(f"""
 
     <section id="basic-information" class="card">
         <h2>Basic Information</h2>
-        <p><strong>Participant folder:</strong> {escape(str(directory))}</p>
-        <p><strong>Grip data folder:</strong> {escape(str(grip_directory))}</p>
-        <p><strong>Number of training sets:</strong> {number_of_training_sets}</p>
+        {create_participant_information_html(participant_information)}
         <p class="back-to-top"><a href="#top">Back to top</a></p>
     </section>
 """)
@@ -1761,6 +1767,7 @@ add_plotly_figure_to_report(
     page_class='new-report-page'
 )
 
+
 # =========================
 # PAGE 3: UPWARD PERTURBATIONS
 # =========================
@@ -1772,6 +1779,7 @@ html_parts.append("""
             Columns 1 to 3 correspond to trials 1 to 3.
             The dotted horizontal line is the threshold from the high isometric trial.
             The red vertical line is the adaptation instance.
+            Click on any subplot to open the Performance and Target graph for that perturbation.
         </p>
 """)
 
@@ -1806,6 +1814,7 @@ html_parts.append("""
             Columns 1 to 3 correspond to trials 1 to 3.
             The dotted horizontal line is the threshold from the low isometric trial.
             The red vertical line is the adaptation instance.
+            Click on any subplot to open the Performance and Target graph for that perturbation.
         </p>
 """)
 
@@ -1827,6 +1836,7 @@ html_parts.append("""
         <p class="back-to-top"><a href="#top">Back to top</a></p>
     </section>
 """)
+
 
 # =========================
 # PAGE 5: HEMOGLOBIN ACTIVITY DURING TRAINING SETS
@@ -1869,6 +1879,7 @@ html_parts.append("""
         <p class="back-to-top"><a href="#top">Back to top</a></p>
     </section>
 """)
+
 
 # =========================
 # HIDDEN SPATIAL ERROR POPUP

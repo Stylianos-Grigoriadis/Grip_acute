@@ -16,7 +16,10 @@ plt.rcParams['font.family'] = 'serif'        # e.g., 'serif', 'sans-serif', 'mon
 plt.rcParams['font.size'] = 16
 
 # Participants information
-ID = "Sine_1"
+ID = "Pink_1"
+name = "Artinis_" + ID[0] + ID.split("_")[1]
+
+
 information = pd.read_excel(r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Signals\Participants.xlsx')
 matching_row = information.loc[information["ID"] == ID]
 date_of_collection = matching_row.iloc[0, 2]
@@ -83,8 +86,7 @@ list_set = [training_set_1,
 
 
 directory_hemoglobin = directory + r'\Brain data'
-name = f'Artinis_S1'
-data, fs, list_indices, list_time_events, pre_event_indices, derived_end_indices, final_event_indices, list_training_sets = lb.artinis_read_file_22_events_plot(directory_hemoglobin, name)
+data, fs, list_indices, list_time_events, pre_event_indices, derived_end_indices, final_event_indices, list_training_sets = lb.artinis_read_file_10_events_plot(directory_hemoglobin, name, write_manual_events_to_excel=False)
 # print(data)
 # print(fs)
 # print(list_indices)
@@ -94,7 +96,7 @@ data, fs, list_indices, list_time_events, pre_event_indices, derived_end_indices
 # print(final_event_indices)
 # print(list_training_sets)
 # Erase the line below when you have only the training sets
-list_training_sets = list_training_sets[6:-6]
+# list_training_sets = list_training_sets[6:-6]
 
 # time = np.linspace(0, 40, len(training_set_1["Performance"]))
 # plt.plot(time, training_set_1["Performance"], label="Performance")
@@ -340,17 +342,17 @@ for i in range(len(list_training_sets)):
         "Right Rx3-Tx6 O2Hb": right_Rx3_Tx6_O2Hb
     }
 
-    plot_force_and_stacked_o2hb_one_plotly(
-        time=time,
-        signal_dict=signal_dict,
-        force_data=force_data,
-        training_start_sec=10,
-        force_duration=30,
-        padding_percent=10,
-        gap_percent=1,
-        center_method="first",
-        title=f"Set {i + 1}: Force tracking and O2Hb response"
-    )
+    # plot_force_and_stacked_o2hb_one_plotly(
+    #     time=time,
+    #     signal_dict=signal_dict,
+    #     force_data=force_data,
+    #     training_start_sec=10,
+    #     force_duration=30,
+    #     padding_percent=10,
+    #     gap_percent=1,
+    #     center_method="first",
+    #     title=f"Set {i + 1}: Force tracking and O2Hb response"
+    # )
 
 
 for i in range(len(list_training_sets)):
@@ -399,7 +401,7 @@ for i in range(len(list_training_sets)):
     plt.show()
 
     if i+1 == 8:
-        plot = False
+        plot = True
     else:
         plot = False
     evaluation_left_Rx1_Tx1_O2Hb, peak_height_left_Rx1_Tx1_O2Hb = lb.fNIRS_check_quality(left_Rx1_Tx1_O2Hb, 100, '[9322] Rx1 - Tx1  O2Hb', plot=plot)

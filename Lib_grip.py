@@ -22,6 +22,9 @@ from scipy.signal import fftconvolve
 from math import gamma as gamma_fun
 from scipy.signal import fftconvolve
 from matplotlib.widgets import SpanSelector, TextBox, Button
+from openpyxl import load_workbook
+from datetime import datetime, timedelta
+
 
 def Ent_Ap(data, dim, r):
     """
@@ -1548,158 +1551,233 @@ def artinis_read_file(directory, name):
     data = data.select(new_order)
     return data, sampling_frequency
 
-def artinis_read_file_22_events_plot(directory, name, plot_every_n=100):
+
+
+
+
+
+def artinis_read_file_10_events_plot(directory, name, plot_every_n=100, write_manual_events_to_excel=True, recording_start_time=None, event_time_column=None):
     """
-    Reads the Artinis file and creates an interactive plot with:
-    - Time on the main x-axis
-    - Index on a secondary x-axis below
-    - Red vertical lines for the file start events
-    - Orange vertical lines for the automatically created end events
-    - Green vertical lines for manually added events
-    - Black vertical lines 10 seconds before the red file events
-    - A legend showing all event types
+    Reads an Artinis file and creates event-based fNIRS cuts.
 
-    Trial structure:
-        - First 6 trials   -> perturbation trials pre, duration 20 s
-        - Next 10 trials   -> training sets, duration 30 s
-        - Last 6 trials    -> perturbation trials post, duration 20 s
+    For every real event:
+        - pre-event: 10 s before
+        - real event
+        - end-event: 30 s after
 
-    Interactive plot:
-        - Existing black/red/orange/green events can be manipulated
-        - Use mouse drag to select an area
-        - Press SPACE to add a new green event line at the first index of the selected area
-        - Press DELETE to remove any event lines inside the selected area
-        - Two boxes under the x-axes show the start and end indices of the selected span
-        - A middle box shows the indices of event lines inside the selected span
-        - A text box allows manual entry of an index
-        - A button adds a green event line at that index
+    Real events can be:
+        - file events, shown in red
+        - manually added events, shown in green
 
-    After closing the plot:
-        - all final event indices are sorted
-        - the full dataframe is cut into sets every 3 events:
-            events 1,2,3   -> set 1
-            events 4,5,6   -> set 2
-            ...
-            events 64,65,66 -> set 22
-        - each set is sliced from the 1st event of the triplet to the 3rd event of the triplet
-        - all returned sets are Polars DataFrames
+    If write_manual_events_to_excel=True:
+        - manual real events are written into the actual Excel file as "M"
+
+    If recording_start_time is given, for example "09:47:43":
+        - event times are printed as actual clock times.
+
+    If recording_start_time is None:
+        - event times are printed as relative hh:mm:ss from the start of the recording.
     """
-    data = pl.read_excel(f"{directory}\\{name}.xlsx", infer_schema_length=None)
+
+    excel_path = f"{directory}\\{name}.xlsx"
+
+    data = pl.read_excel(excel_path, infer_schema_length=None)
     data = data.rename({data.columns[1]: "Unnamed: 1"})
     data = data.slice(2)
-    sampling_frequency = float(data['Unnamed: 1'][0])
-    total_samples = float(data['Unnamed: 1'][2])
-    step = 1 / sampling_frequency
-    time = np.arange(0, total_samples * step, step)
 
-    column_names = ['Sample number', '[9322] Rx1 - Tx1,Tx2,Tx3  TSI%', '[9322] Rx1 - Tx1,Tx2,Tx3  TSI Fit Factor',
-                    '[9323] Rx3 - Tx4,Tx5,Tx6  TSI%', '[9323] Rx3 - Tx4,Tx5,Tx6  TSI Fit Factor',
-                    '[9322] Rx1 - Tx1  O2Hb', '[9322] Rx1 - Tx1  HHb', '[9322] Rx1 - Tx2  O2Hb',
-                    '[9322] Rx1 - Tx2  HHb', '[9322] Rx1 - Tx3  O2Hb', '[9322] Rx1 - Tx3  HHb',
-                    '[9322] Rx2 - Tx1  O2Hb', '[9322] Rx2 - Tx1  HHb', '[9322] Rx2 - Tx2  O2Hb',
-                    '[9322] Rx2 - Tx2  HHb', '[9322] Rx2 - Tx3  O2Hb', '[9322] Rx2 - Tx3  HHb',
-                    '[9323] Rx3 - Tx4  O2Hb', '[9323] Rx3 - Tx4  HHb', '[9323] Rx3 - Tx5  O2Hb',
-                    '[9323] Rx3 - Tx5  HHb', '[9323] Rx3 - Tx6  O2Hb', '[9323] Rx3 - Tx6  HHb',
-                    '[9323] Rx4 - Tx4  O2Hb', '[9323] Rx4 - Tx4  HHb', '[9323] Rx4 - Tx5  O2Hb',
-                    '[9323] Rx4 - Tx5  HHb', '[9323] Rx4 - Tx6  O2Hb', '[9323] Rx4 - Tx6  HHb', 'Event', 'Event text']
+    sampling_frequency = float(data["Unnamed: 1"][0])
+
+    column_names = [
+        "Sample number",
+        "[9322] Rx1 - Tx1,Tx2,Tx3  TSI%",
+        "[9322] Rx1 - Tx1,Tx2,Tx3  TSI Fit Factor",
+        "[9323] Rx3 - Tx4,Tx5,Tx6  TSI%",
+        "[9323] Rx3 - Tx4,Tx5,Tx6  TSI Fit Factor",
+        "[9322] Rx1 - Tx1  O2Hb",
+        "[9322] Rx1 - Tx1  HHb",
+        "[9322] Rx1 - Tx2  O2Hb",
+        "[9322] Rx1 - Tx2  HHb",
+        "[9322] Rx1 - Tx3  O2Hb",
+        "[9322] Rx1 - Tx3  HHb",
+        "[9322] Rx2 - Tx1  O2Hb",
+        "[9322] Rx2 - Tx1  HHb",
+        "[9322] Rx2 - Tx2  O2Hb",
+        "[9322] Rx2 - Tx2  HHb",
+        "[9322] Rx2 - Tx3  O2Hb",
+        "[9322] Rx2 - Tx3  HHb",
+        "[9323] Rx3 - Tx4  O2Hb",
+        "[9323] Rx3 - Tx4  HHb",
+        "[9323] Rx3 - Tx5  O2Hb",
+        "[9323] Rx3 - Tx5  HHb",
+        "[9323] Rx3 - Tx6  O2Hb",
+        "[9323] Rx3 - Tx6  HHb",
+        "[9323] Rx4 - Tx4  O2Hb",
+        "[9323] Rx4 - Tx4  HHb",
+        "[9323] Rx4 - Tx5  O2Hb",
+        "[9323] Rx4 - Tx5  HHb",
+        "[9323] Rx4 - Tx6  O2Hb",
+        "[9323] Rx4 - Tx6  HHb",
+        "Event",
+        "Event text"
+    ]
+
     data = data.slice(63)
-
     data = data.rename(dict(zip(data.columns, column_names)))
-    data = data.with_columns(
-        pl.Series("Time", time)
-    )
+
+    time = np.arange(data.height) / sampling_frequency
+    data = data.with_columns(pl.Series("Time", time))
 
     cols = data.columns
     new_order = [cols[0], "Time"] + cols[1:-1]
     data = data.select(new_order)
 
     data = data.with_columns(
-        pl.col("Event").cast(pl.Utf8)
+        pl.col("Event").cast(pl.Utf8).fill_null("")
     )
-    data = data.with_columns(
-        pl.col("Event").fill_null("")
-    )
-
-    list_indices = []
-    list_time_events = []
-    for i, value in enumerate(data['Event']):
-        if value != "":
-            list_indices.append(i)
-            list_time_events.append(data['Time'][i])
 
     numeric_cols = [c for c in column_names if c not in ["Event", "Event text"]]
+
     data = data.with_columns(
         [pl.col(c).cast(pl.Float64) for c in numeric_cols]
     )
 
-    # ---------------- PLOT ----------------
-    y_col = '[9322] Rx1 - Tx1  O2Hb'
+    def seconds_to_hhmmss(seconds):
+        seconds = int(round(float(seconds)))
+        hours = seconds // 3600
+        minutes = (seconds % 3600) // 60
+        secs = seconds % 60
+        return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+
+    def get_event_time_string(idx):
+        if event_time_column is not None and event_time_column in data.columns:
+            value = data[event_time_column][idx]
+
+            if value is not None:
+                value_str = str(value)
+
+                if len(value_str) >= 8:
+                    return value_str[-8:]
+
+        relative_seconds = float(data["Time"][idx])
+
+        if recording_start_time is not None:
+            start_time = datetime.strptime(recording_start_time, "%H:%M:%S")
+            event_time = start_time + timedelta(seconds=relative_seconds)
+            return event_time.strftime("%H:%M:%S")
+
+        return seconds_to_hhmmss(relative_seconds)
+
+    def print_real_event_times(real_event_indices, title="Real event times"):
+        print("")
+        print(title)
+        print("Event\tTime")
+
+        for event_number, idx in enumerate(sorted(real_event_indices), start=1):
+            print(f"{event_number}\t{get_event_time_string(idx)}")
+
+        print("")
+
+    list_indices = []
+    list_time_events = []
+
+    for i, value in enumerate(data["Event"]):
+        if value != "":
+            list_indices.append(i)
+            list_time_events.append(data["Time"][i])
+
+    print(f"Found {len(list_indices)} real file events.")
+    print_real_event_times(list_indices, title="Initial real file event times")
+
+    pre_event_indices = []
+    derived_end_indices = []
+
+    for idx in list_indices:
+        pre_idx = int(round(idx - 10 * sampling_frequency))
+        end_idx = int(round(idx + 30 * sampling_frequency))
+
+        if pre_idx < 0:
+            pre_idx = 0
+
+        if end_idx >= data.height:
+            end_idx = data.height - 1
+
+        pre_event_indices.append(pre_idx)
+        derived_end_indices.append(end_idx)
+
+    # -------------------------------------------------
+    # Plot
+    # -------------------------------------------------
+    y_col = "[9322] Rx1 - Tx1  O2Hb"
 
     idx_plot = np.arange(0, data.height, plot_every_n)
-    time_plot = data['Time'].to_numpy()[idx_plot]
+    time_plot = data["Time"].to_numpy()[idx_plot]
     y_plot = data[y_col].to_numpy()[idx_plot]
-    time_full = data['Time'].to_numpy()
+    time_full = data["Time"].to_numpy()
 
     fig, ax = plt.subplots(figsize=(14, 6))
     ax.plot(time_plot, y_plot, label=y_col)
 
     event_lines = []
-    added_event_indices = []
 
-    def add_event_line(idx, color='red', label=None, source='manual'):
+    def add_event_line(idx, color, label, source):
         if idx < 0 or idx >= len(time_full):
             return None
 
         t = time_full[idx]
-        line = ax.axvline(x=t, linestyle='--', color=color, label=label)
-        item = {"line": line, "index": int(idx), "time": float(t), "color": color, "source": source}
+        line = ax.axvline(x=t, linestyle="--", color=color, label=label)
+
+        item = {
+            "line": line,
+            "index": int(idx),
+            "time": float(t),
+            "source": source
+        }
+
         event_lines.append(item)
         return item
 
-    # Original file start events -> red
-    for k, idx in enumerate(list_indices):
-        if k == 0:
-            add_event_line(idx, color='red', label='File Events', source='file_start')
-        else:
-            add_event_line(idx, color='red', source='file_start')
+    def add_event_triplet(real_idx, real_color="red", real_source="file_event"):
+        pre_idx = int(round(real_idx - 10 * sampling_frequency))
+        end_idx = int(round(real_idx + 30 * sampling_frequency))
 
-    # 10 sec before file events -> black
-    pre_event_indices = []
-    for k, idx in enumerate(list_indices):
-        pre_idx = int(round(idx - 10 * sampling_frequency))
         if pre_idx < 0:
             pre_idx = 0
-        pre_event_indices.append(pre_idx)
 
-    for k, idx in enumerate(pre_event_indices):
-        if k == 0:
-            add_event_line(idx, color='black', label='Pre Events (-10 s)', source='pre_event')
-        else:
-            add_event_line(idx, color='black', source='pre_event')
-
-    # Automatically created end events -> orange
-    derived_end_indices = []
-    for k, start_idx in enumerate(list_indices):
-        if k < 6:
-            duration_sec = 20
-        elif k < 16:
-            duration_sec = 30
-        else:
-            duration_sec = 20
-
-        end_idx = int(round(start_idx + duration_sec * sampling_frequency))
         if end_idx >= len(time_full):
             end_idx = len(time_full) - 1
 
-        derived_end_indices.append(end_idx)
+        pre_label = "Pre Events (-10 s)" if not any(
+            item["source"] in ["pre_event", "manual_pre_event"] for item in event_lines
+        ) else None
 
-    for k, idx in enumerate(derived_end_indices):
-        if k == 0:
-            add_event_line(idx, color='orange', label='Derived End Events', source='derived_end')
+        end_label = "End Events (+30 s)" if not any(
+            item["source"] in ["end_event", "manual_end_event"] for item in event_lines
+        ) else None
+
+        if real_source == "file_event":
+            real_label = "File Events" if not any(
+                item["source"] == "file_event" for item in event_lines
+            ) else None
+
+            pre_source = "pre_event"
+            end_source = "end_event"
+
         else:
-            add_event_line(idx, color='orange', source='derived_end')
+            real_label = "Manual Events" if not any(
+                item["source"] == "manual_event" for item in event_lines
+            ) else None
 
-    ax.set_xlabel('Time (s)')
+            pre_source = "manual_pre_event"
+            end_source = "manual_end_event"
+
+        add_event_line(pre_idx, color="black", label=pre_label, source=pre_source)
+        add_event_line(real_idx, color=real_color, label=real_label, source=real_source)
+        add_event_line(end_idx, color="orange", label=end_label, source=end_source)
+
+    for idx in list_indices:
+        add_event_triplet(idx, real_color="red", real_source="file_event")
+
+    ax.set_xlabel("Time (s)")
     ax.set_ylabel(y_col)
 
     def time_to_index(x):
@@ -1708,51 +1786,86 @@ def artinis_read_file_22_events_plot(directory, name, plot_every_n=100):
     def index_to_time(x):
         return x / sampling_frequency
 
-    secax = ax.secondary_xaxis('bottom', functions=(time_to_index, index_to_time))
-    secax.spines['bottom'].set_position(('outward', 40))
-    secax.set_xlabel('Index')
+    secax = ax.secondary_xaxis("bottom", functions=(time_to_index, index_to_time))
+    secax.spines["bottom"].set_position(("outward", 40))
+    secax.set_xlabel("Index")
 
-    selected_range = {"xmin": None, "xmax": None, "start_idx": None, "end_idx": None}
+    selected_range = {
+        "xmin": None,
+        "xmax": None,
+        "start_idx": None,
+        "end_idx": None
+    }
 
     start_box = fig.text(
         0.22, 0.09, "Start index: -",
-        ha='center', va='center',
-        bbox=dict(boxstyle='round', facecolor='white', edgecolor='black')
+        ha="center",
+        va="center",
+        bbox=dict(boxstyle="round", facecolor="white", edgecolor="black")
     )
+
     events_box = fig.text(
         0.50, 0.09, "Event indices: -",
-        ha='center', va='center',
-        bbox=dict(boxstyle='round', facecolor='white', edgecolor='black')
+        ha="center",
+        va="center",
+        bbox=dict(boxstyle="round", facecolor="white", edgecolor="black")
     )
+
     end_box = fig.text(
         0.78, 0.09, "End index: -",
-        ha='center', va='center',
-        bbox=dict(boxstyle='round', facecolor='white', edgecolor='black')
+        ha="center",
+        va="center",
+        bbox=dict(boxstyle="round", facecolor="white", edgecolor="black")
     )
 
     def update_event_box(x0, x1):
         event_indices_in_span = sorted(
             [item["index"] for item in event_lines if x0 <= item["time"] <= x1]
         )
+
         if event_indices_in_span:
             events_box.set_text(f"Event indices: {event_indices_in_span}")
         else:
             events_box.set_text("Event indices: -")
 
+    def get_current_real_event_indices():
+        real_event_indices = [
+            item["index"] for item in event_lines
+            if item["source"] in ["file_event", "manual_event"]
+        ]
+
+        return sorted(real_event_indices)
+
     def add_manual_event_at_index(new_index):
         if new_index < 0 or new_index >= len(time_full):
-            print(f"Index {new_index} is out of range. Valid range: 0 to {len(time_full)-1}")
+            print(f"Index {new_index} is out of range.")
             return
 
-        label = 'Manual Events' if not any(item["source"] == 'manual' for item in event_lines) else None
-        add_event_line(new_index, color='green', label=label, source='manual')
-        added_event_indices.append(new_index)
+        add_event_triplet(
+            real_idx=new_index,
+            real_color="green",
+            real_source="manual_event"
+        )
 
+        pre_idx = max(0, int(round(new_index - 10 * sampling_frequency)))
+        end_idx = min(len(time_full) - 1, int(round(new_index + 30 * sampling_frequency)))
         new_time = time_full[new_index]
-        print(f"Added event at index {new_index}, time {new_time:.3f} s")
+
+        print(f"Added manual real event at index {new_index}, time {new_time:.3f} s")
+        print(f"Added pre-event at index {pre_idx}")
+        print(f"Added end-event at index {end_idx}")
+
+        if write_manual_events_to_excel:
+            print("This manual event will be written as M in the Excel file after closing the plot.")
+        else:
+            print("This manual event will NOT be written to the Excel file.")
+
+        current_real_events = get_current_real_event_indices()
+        print_real_event_times(current_real_events, title="Updated real event times")
 
         xmin = selected_range["xmin"]
         xmax = selected_range["xmax"]
+
         if xmin is not None and xmax is not None:
             x0 = min(xmin, xmax)
             x1 = max(xmin, xmax)
@@ -1775,15 +1888,16 @@ def artinis_read_file_22_events_plot(directory, name, plot_every_n=100):
 
         start_box.set_text(f"Start index: {start_idx}")
         end_box.set_text(f"End index: {end_idx}")
+
         update_event_box(x0, x1)
         fig.canvas.draw_idle()
 
     span = SpanSelector(
         ax,
         onselect,
-        'horizontal',
+        "horizontal",
         useblit=True,
-        props=dict(alpha=0.2, facecolor='gray'),
+        props=dict(alpha=0.2, facecolor="gray"),
         interactive=True,
         drag_from_anywhere=True
     )
@@ -1791,13 +1905,13 @@ def artinis_read_file_22_events_plot(directory, name, plot_every_n=100):
     ax_textbox = plt.axes([0.35, 0.01, 0.18, 0.05])
     ax_button = plt.axes([0.55, 0.01, 0.12, 0.05])
 
-    text_box = TextBox(ax_textbox, 'Index ', initial='')
-    button_add = Button(ax_button, 'Add event')
+    text_box = TextBox(ax_textbox, "Index ", initial="")
+    button_add = Button(ax_button, "Add event")
 
     def on_button_click(event):
         text_value = text_box.text.strip()
 
-        if text_value == '':
+        if text_value == "":
             print("Please enter an index.")
             return
 
@@ -1815,21 +1929,17 @@ def artinis_read_file_22_events_plot(directory, name, plot_every_n=100):
         xmin = selected_range["xmin"]
         xmax = selected_range["xmax"]
 
-        if event.key == ' ':
-            if xmin is None or xmax is None:
-                return
+        if xmin is None or xmax is None:
+            return
 
-            x0 = min(xmin, xmax)
+        x0 = min(xmin, xmax)
+        x1 = max(xmin, xmax)
+
+        if event.key == " ":
             new_index = int(np.argmin(np.abs(time_full - x0)))
             add_manual_event_at_index(new_index)
 
-        elif event.key == 'delete':
-            if xmin is None or xmax is None:
-                return
-
-            x0 = min(xmin, xmax)
-            x1 = max(xmin, xmax)
-
+        elif event.key == "delete":
             to_keep = []
             removed = []
 
@@ -1845,21 +1955,60 @@ def artinis_read_file_22_events_plot(directory, name, plot_every_n=100):
             if removed:
                 removed_indices = sorted([item["index"] for item in removed])
                 print(f"Deleted events at indices: {removed_indices}")
-                update_event_box(x0, x1)
-                ax.legend()
-                fig.canvas.draw_idle()
 
-    fig.canvas.mpl_connect('key_press_event', on_key)
+            update_event_box(x0, x1)
+            ax.legend()
+            fig.canvas.draw_idle()
+
+    fig.canvas.mpl_connect("key_press_event", on_key)
 
     ax.legend()
     plt.subplots_adjust(bottom=0.30)
     plt.show()
-    # --------------------------------------
 
+    # -------------------------------------------------
+    # Manual event indices after closing the plot
+    # -------------------------------------------------
+    manual_event_indices = sorted(
+        [item["index"] for item in event_lines if item["source"] == "manual_event"]
+    )
+
+    if manual_event_indices:
+        event_values = data["Event"].to_list()
+
+        for idx in manual_event_indices:
+            event_values[idx] = "M"
+
+        data = data.with_columns(
+            pl.Series("Event", event_values)
+        )
+
+        if write_manual_events_to_excel:
+            excel_first_data_row = 67
+            event_excel_column = 30
+
+            wb = load_workbook(excel_path)
+            ws = wb.active
+
+            for idx in manual_event_indices:
+                excel_row = excel_first_data_row + idx
+                ws.cell(row=excel_row, column=event_excel_column).value = "M"
+
+            wb.save(excel_path)
+
+            print(f"Manual events written to Excel as M at indices: {manual_event_indices}")
+            print(f"Saved Excel file: {excel_path}")
+
+        else:
+            print("Manual events were added to the returned dataframe but not written to Excel.")
+            print(f"Manual event indices: {manual_event_indices}")
+
+    # -------------------------------------------------
+    # Cut dataframe into sets
+    # -------------------------------------------------
     final_event_indices = sorted([item["index"] for item in event_lines])
 
-    # --------- CUT FULL DATAFRAME INTO 22 POLARS DATAFRAMES EVERY 3 EVENTS ---------
-    list_22_sets = []
+    list_sets = []
 
     n_triplets = len(final_event_indices) // 3
 
@@ -1872,10 +2021,7 @@ def artinis_read_file_22_events_plot(directory, name, plot_every_n=100):
         end_idx = max(idx1, idx2, idx3)
 
         df_set = data.slice(start_idx, end_idx - start_idx + 1)
-        list_22_sets.append(df_set)
-
-    if len(list_22_sets) != 22:
-        print(f"Warning: {len(list_22_sets)} sets were created instead of 22. Final number of events = {len(final_event_indices)}")
+        list_sets.append(df_set)
 
     return (
         data,
@@ -1885,9 +2031,8 @@ def artinis_read_file_22_events_plot(directory, name, plot_every_n=100):
         pre_event_indices,
         derived_end_indices,
         final_event_indices,
-        list_22_sets
+        list_sets
     )
-
 def fNIRS_check_quality(y, fs, name, plot=True):
     """
         Evaluate fNIRS channel quality by detecting a cardiac peak in the PSD.

@@ -15,10 +15,13 @@ from plotly.subplots import make_subplots
 # SETTINGS
 # =========================
 directory = Path(
-    r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Data to screen\Sine_1'
+    r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Data to screen\Pink_1'
 )
 
 ID = directory.name
+artinis_file_name = "Artinis_" + ID[0] + ID.split("_")[1]
+# artinis_file_name = 'Artinis_W1'
+
 grip_directory = directory / 'Grip data'
 
 participants_excel_path = Path(
@@ -26,8 +29,8 @@ participants_excel_path = Path(
 )
 
 number_of_training_sets = 10
-
-report_path = directory / f'{ID}_prequalification_report.html'
+save_directory = Path(r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Figures\Reports')
+report_path = save_directory / f'{ID}_prequalification_report.html'
 
 force_color = 'blue'
 target_color = 'red'
@@ -55,7 +58,6 @@ perturbation_window_color = 'rgba(128, 128, 128, 0.25)'
 # HEMOGLOBIN SETTINGS
 # =========================
 brain_directory = directory / 'Brain data'
-artinis_file_name = 'Artinis_S1'
 
 hemoglobin_training_start_sec = 10
 hemoglobin_force_duration = 30
@@ -1167,12 +1169,12 @@ def load_hemoglobin_training_sets(brain_directory, artinis_file_name):
     Loads the Artinis file and keeps only the middle 10 events,
     which correspond to the 10 training sets.
     """
-    data, fs, list_indices, list_time_events, pre_event_indices, derived_end_indices, final_event_indices, list_training_sets = lb.artinis_read_file_22_events_plot(
+    data, fs, list_indices, list_time_events, pre_event_indices, derived_end_indices, final_event_indices, list_training_sets = lb.artinis_read_file_10_events_plot(
         brain_directory,
-        artinis_file_name
+        artinis_file_name,
+        write_manual_events_to_excel=False
     )
 
-    list_training_sets = list_training_sets[6:-6]
 
     if len(list_training_sets) != number_of_training_sets:
         raise ValueError(
@@ -1195,13 +1197,13 @@ def extract_filtered_o2hb_signals(brain_data, fs):
     right_Rx3_Tx5_O2Hb = brain_data['[9323] Rx3 - Tx5  O2Hb'].to_numpy()
     right_Rx3_Tx6_O2Hb = brain_data['[9323] Rx3 - Tx6  O2Hb'].to_numpy()
 
-    left_Rx1_Tx1_O2Hb = lb.butter_bandpass_filtfilt_SOS(left_Rx1_Tx1_O2Hb, fs, low=hemoglobin_low_frequency, high=hemoglobin_high_frequency, order=hemoglobin_filter_order, plot=False, demean=False)
-    left_Rx1_Tx2_O2Hb = lb.butter_bandpass_filtfilt_SOS(left_Rx1_Tx2_O2Hb, fs, low=hemoglobin_low_frequency, high=hemoglobin_high_frequency, order=hemoglobin_filter_order, plot=False, demean=False)
-    left_Rx1_Tx3_O2Hb = lb.butter_bandpass_filtfilt_SOS(left_Rx1_Tx3_O2Hb, fs, low=hemoglobin_low_frequency, high=hemoglobin_high_frequency, order=hemoglobin_filter_order, plot=False, demean=False)
+    # left_Rx1_Tx1_O2Hb = lb.butter_bandpass_filtfilt_SOS(left_Rx1_Tx1_O2Hb, fs, low=hemoglobin_low_frequency, high=hemoglobin_high_frequency, order=hemoglobin_filter_order, plot=False, demean=False)
+    # left_Rx1_Tx2_O2Hb = lb.butter_bandpass_filtfilt_SOS(left_Rx1_Tx2_O2Hb, fs, low=hemoglobin_low_frequency, high=hemoglobin_high_frequency, order=hemoglobin_filter_order, plot=False, demean=False)
+    # left_Rx1_Tx3_O2Hb = lb.butter_bandpass_filtfilt_SOS(left_Rx1_Tx3_O2Hb, fs, low=hemoglobin_low_frequency, high=hemoglobin_high_frequency, order=hemoglobin_filter_order, plot=False, demean=False)
 
-    right_Rx3_Tx4_O2Hb = lb.butter_bandpass_filtfilt_SOS(right_Rx3_Tx4_O2Hb, fs, low=hemoglobin_low_frequency, high=hemoglobin_high_frequency, order=hemoglobin_filter_order, plot=False, demean=False)
-    right_Rx3_Tx5_O2Hb = lb.butter_bandpass_filtfilt_SOS(right_Rx3_Tx5_O2Hb, fs, low=hemoglobin_low_frequency, high=hemoglobin_high_frequency, order=hemoglobin_filter_order, plot=False, demean=False)
-    right_Rx3_Tx6_O2Hb = lb.butter_bandpass_filtfilt_SOS(right_Rx3_Tx6_O2Hb, fs, low=hemoglobin_low_frequency, high=hemoglobin_high_frequency, order=hemoglobin_filter_order, plot=False, demean=False)
+    # right_Rx3_Tx4_O2Hb = lb.butter_bandpass_filtfilt_SOS(right_Rx3_Tx4_O2Hb, fs, low=hemoglobin_low_frequency, high=hemoglobin_high_frequency, order=hemoglobin_filter_order, plot=False, demean=False)
+    # right_Rx3_Tx5_O2Hb = lb.butter_bandpass_filtfilt_SOS(right_Rx3_Tx5_O2Hb, fs, low=hemoglobin_low_frequency, high=hemoglobin_high_frequency, order=hemoglobin_filter_order, plot=False, demean=False)
+    # right_Rx3_Tx6_O2Hb = lb.butter_bandpass_filtfilt_SOS(right_Rx3_Tx6_O2Hb, fs, low=hemoglobin_low_frequency, high=hemoglobin_high_frequency, order=hemoglobin_filter_order, plot=False, demean=False)
 
     signal_dict = {
         "Left Rx1-Tx1 O2Hb": left_Rx1_Tx1_O2Hb,

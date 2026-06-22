@@ -16,7 +16,7 @@ plt.rcParams['font.family'] = 'serif'        # e.g., 'serif', 'sans-serif', 'mon
 plt.rcParams['font.size'] = 16
 
 # Participants information
-ID = "Pink_1"
+ID = "Pink_2"
 name = "Artinis_" + ID[0] + ID.split("_")[1]
 
 
@@ -401,9 +401,10 @@ for i in range(len(list_training_sets)):
     plt.show()
 
     if i+1 == 8:
-        plot = True
+        plot = False
     else:
         plot = False
+    print('hello')
     evaluation_left_Rx1_Tx1_O2Hb, peak_height_left_Rx1_Tx1_O2Hb = lb.fNIRS_check_quality(left_Rx1_Tx1_O2Hb, 100, '[9322] Rx1 - Tx1  O2Hb', plot=plot)
     evaluation_left_Rx1_Tx2_O2Hb, peak_height_left_Rx1_Tx2_O2Hb = lb.fNIRS_check_quality(left_Rx1_Tx2_O2Hb, 100, '[9322] Rx1 - Tx2  O2Hb', plot=plot)
     evaluation_left_Rx1_Tx3_O2Hb, peak_height_left_Rx1_Tx3_O2Hb = lb.fNIRS_check_quality(left_Rx1_Tx3_O2Hb, 100, '[9322] Rx1 - Tx3  O2Hb', plot=plot)

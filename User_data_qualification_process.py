@@ -16,7 +16,7 @@ plt.rcParams['font.family'] = 'serif'        # e.g., 'serif', 'sans-serif', 'mon
 plt.rcParams['font.size'] = 16
 
 # Participants information
-ID = "Pink_2"
+ID = "White_2"
 name = "Artinis_" + ID[0] + ID.split("_")[1]
 
 
@@ -400,8 +400,8 @@ for i in range(len(list_training_sets)):
     plt.legend()
     plt.show()
 
-    if i+1 == 8:
-        plot = False
+    if i+1 == 9:
+        plot = True
     else:
         plot = False
     print('hello')

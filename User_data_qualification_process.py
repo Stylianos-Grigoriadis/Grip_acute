@@ -16,11 +16,11 @@ plt.rcParams['font.family'] = 'serif'        # e.g., 'serif', 'sans-serif', 'mon
 plt.rcParams['font.size'] = 16
 
 # Participants information
-ID = "White_2"
+ID = "Pink_3"
 name = "Artinis_" + ID[0] + ID.split("_")[1]
 
 
-information = pd.read_excel(r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Signals\Participants.xlsx')
+information = pd.read_excel(r'C:\Users\Administrator\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Signals\Participants.xlsx')
 matching_row = information.loc[information["ID"] == ID]
 date_of_collection = matching_row.iloc[0, 2]
 date_of_collection = date_of_collection.date()
@@ -38,7 +38,7 @@ print(str(round(MVC*9.81)) + "N")
 print(str(dominant_hand) + " dominant arm")
 
 
-directory = r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Data to screen'
+directory = r'C:\Users\Administrator\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Data to screen'
 directory = os.path.join(directory, ID)
 os.chdir(directory)
 

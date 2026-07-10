@@ -6,13 +6,13 @@ from datetime import datetime
 import pandas as pd
 
 
-participants_information = pd.read_excel(r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Signals\Participants.xlsx')
+participants_information = pd.read_excel(r'C:\Users\Administrator\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Signals\Participants.xlsx')
 
-raw_data_directory = r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Raw Data'
+raw_data_directory = r'C:\Users\Administrator\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Raw Data'
 
-directory = r"C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Data to screen"
+directory = r"C:\Users\Administrator\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Data to screen"
 
-folder_to_move = ["White_2"]
+folder_to_move = ["Pink_3"]
 
 
 def get_file_datetime(filename):
@@ -166,10 +166,11 @@ for folder_name in folder_to_move:
 
     if os.path.exists(old_brain_data_folder):
 
-        if os.path.exists(new_brain_data_folder):
-            shutil.rmtree(new_brain_data_folder)
-
-        shutil.copytree(old_brain_data_folder, new_brain_data_folder)
+        shutil.copytree(
+            old_brain_data_folder,
+            new_brain_data_folder,
+            dirs_exist_ok=True
+        )
 
         print("Brain data copied")
 

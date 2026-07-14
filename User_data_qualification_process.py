@@ -16,7 +16,7 @@ plt.rcParams['font.family'] = 'serif'        # e.g., 'serif', 'sans-serif', 'mon
 plt.rcParams['font.size'] = 16
 
 # Participants information
-ID = "Pink_3"
+ID = "White_3"
 name = "Artinis_" + ID[0] + ID.split("_")[1]
 
 
@@ -355,6 +355,26 @@ for i in range(len(list_training_sets)):
     # )
 
 
+fig_tsi, axes_tsi = plt.subplots(
+    nrows=5,
+    ncols=2,
+    figsize=(18, 20),
+    sharey=True,
+    constrained_layout=True
+)
+axes_tsi = axes_tsi.flatten()
+
+
+fig_cardiac, axes_cardiac = plt.subplots(
+    nrows=5,
+    ncols=2,
+    figsize=(18, 20),
+    sharey=True,
+    constrained_layout=True
+)
+axes_cardiac = axes_cardiac.flatten()
+
+
 for i in range(len(list_training_sets)):
     training_set = list_training_sets[i]
     # I will check it out but hypothetically the Rx1 and Rx3 are the long distance receiver
@@ -392,18 +412,41 @@ for i in range(len(list_training_sets)):
     right_Rx4_Tx4_HHb = training_set['[9323] Rx4 - Tx4  HHb'].to_numpy()
     right_Rx4_Tx5_HHb = training_set['[9323] Rx4 - Tx5  HHb'].to_numpy()
     right_Rx4_Tx6_HHb = training_set['[9323] Rx4 - Tx6  HHb'].to_numpy()
-
     plot_time = time - time[0]
-    plt.plot(plot_time, left_RX1_TSI_Fit_Factor, label='left TSI Fit Factor', lw=3)
-    plt.plot(plot_time, right_RX3_TSI_Fit_Factor, label='right TSI Fit Factor', lw=3)
-    plt.axhline(y=90, label='Threshold of accurate data', c='red', lw=3)
-    plt.legend()
-    plt.show()
 
-    if i+1 == 9:
-        plot = True
-    else:
-        plot = False
+    ax_tsi = axes_tsi[i]
+
+    ax_tsi.plot(
+        plot_time,
+        left_RX1_TSI_Fit_Factor,
+        label='Left',
+        lw=2
+    )
+
+    ax_tsi.plot(
+        plot_time,
+        right_RX3_TSI_Fit_Factor,
+        label='Right',
+        lw=2
+    )
+
+    ax_tsi.axhline(
+        y=90,
+        label='Accuracy threshold',
+        c='red',
+        lw=2,
+        linestyle='--'
+    )
+
+    ax_tsi.set_title(f'Training set {i + 1}')
+    ax_tsi.set_xlabel('Time (s)')
+    ax_tsi.grid(alpha=0.2)
+
+    # if i+1 == 9:
+    #     plot = True
+    # else:
+    #     plot = False
+    plot = False
     print('hello')
     evaluation_left_Rx1_Tx1_O2Hb, peak_height_left_Rx1_Tx1_O2Hb = lb.fNIRS_check_quality(left_Rx1_Tx1_O2Hb, 100, '[9322] Rx1 - Tx1  O2Hb', plot=plot)
     evaluation_left_Rx1_Tx2_O2Hb, peak_height_left_Rx1_Tx2_O2Hb = lb.fNIRS_check_quality(left_Rx1_Tx2_O2Hb, 100, '[9322] Rx1 - Tx2  O2Hb', plot=plot)
@@ -436,15 +479,42 @@ for i in range(len(list_training_sets)):
     list_evaluation_right = [evaluation_right_Rx3_Tx4_O2Hb, evaluation_right_Rx3_Tx5_O2Hb, evaluation_right_Rx3_Tx6_O2Hb, evaluation_right_Rx4_Tx4_O2Hb, evaluation_right_Rx4_Tx5_O2Hb, evaluation_right_Rx4_Tx6_O2Hb, evaluation_right_Rx3_Tx4_HHb, evaluation_right_Rx3_Tx5_HHb, evaluation_right_Rx3_Tx6_HHb, evaluation_right_Rx4_Tx4_HHb, evaluation_right_Rx4_Tx5_HHb, evaluation_right_Rx4_Tx6_HHb]
     list_peak_height_right = [peak_height_right_Rx3_Tx4_O2Hb, peak_height_right_Rx3_Tx5_O2Hb, peak_height_right_Rx3_Tx6_O2Hb, peak_height_right_Rx4_Tx4_O2Hb, peak_height_right_Rx4_Tx5_O2Hb, peak_height_right_Rx4_Tx6_O2Hb, peak_height_right_Rx3_Tx4_HHb, peak_height_right_Rx3_Tx5_HHb, peak_height_right_Rx3_Tx6_HHb, peak_height_right_Rx4_Tx4_HHb, peak_height_right_Rx4_Tx5_HHb, peak_height_right_Rx4_Tx6_HHb]
 
-    plt.plot(list_peak_height_left, label='left')
-    plt.plot(list_peak_height_right, label='right')
-    plt.axhline(y=12, label='Threshold of accurate cardiac rhythm', c='red')
-    plt.legend()
-    plt.show()
+    ax_cardiac = axes_cardiac[i]
+
+    channel_numbers = np.arange(1, len(list_peak_height_left) + 1)
+
+    ax_cardiac.plot(
+        channel_numbers,
+        list_peak_height_left,
+        marker='o',
+        label='Left',
+        lw=2
+    )
+
+    ax_cardiac.plot(
+        channel_numbers,
+        list_peak_height_right,
+        marker='o',
+        label='Right',
+        lw=2
+    )
+
+    ax_cardiac.axhline(
+        y=12,
+        label='Cardiac rhythm threshold',
+        c='red',
+        lw=2,
+        linestyle='--'
+    )
+
+    ax_cardiac.set_title(f'Training set {i + 1}')
+    ax_cardiac.set_xlabel('Channel')
+    ax_cardiac.set_xticks(channel_numbers)
+    ax_cardiac.grid(alpha=0.2)
 
 
 
-    lb.detect_motion_mask_from_movstd(time_window=2, signal=left_Rx1_Tx1_O2Hb, fs=fs, thresh_z=4, plot=True)
+    lb.detect_motion_mask_from_movstd(time_window=2, signal=left_Rx1_Tx1_O2Hb, fs=fs, thresh_z=4, plot=plot)
     lb.detect_motion_mask_from_movstd(time_window=2, signal=left_Rx1_Tx2_O2Hb, fs=fs, thresh_z=4, plot=plot)
     lb.detect_motion_mask_from_movstd(time_window=2, signal=left_Rx1_Tx3_O2Hb, fs=fs, thresh_z=4, plot=plot)
     lb.detect_motion_mask_from_movstd(time_window=2, signal=left_Rx2_Tx1_O2Hb, fs=fs, thresh_z=4, plot=plot)
@@ -470,3 +540,95 @@ for i in range(len(list_training_sets)):
 
 
 
+# Common title and legend for the TSI figure
+fig_tsi.suptitle(
+    'TSI Fit Factor Across Training Sets',
+    fontsize=20
+)
+
+handles_tsi, labels_tsi = axes_tsi[0].get_legend_handles_labels()
+
+fig_tsi.legend(
+    handles_tsi,
+    labels_tsi,
+    loc='lower center',
+    ncol=3,
+    bbox_to_anchor=(0.5, -0.01)
+)
+
+
+# Common title and legend for the cardiac-quality figure
+fig_cardiac.suptitle(
+    'Cardiac Rhythm Quality Across Training Sets',
+    fontsize=20
+)
+
+handles_cardiac, labels_cardiac = axes_cardiac[0].get_legend_handles_labels()
+
+fig_cardiac.legend(
+    handles_cardiac,
+    labels_cardiac,
+    loc='lower center',
+    ncol=3,
+    bbox_to_anchor=(0.5, -0.01)
+)
+
+# Remove all repeated y-axis labels
+for ax in axes_tsi:
+    ax.set_ylabel('')
+
+for ax in axes_cardiac:
+    ax.set_ylabel('')
+
+
+# Format the y axes
+for row in range(5):
+
+    left_index = row * 2
+    right_index = left_index + 1
+
+    # Show y-axis ticks only in the left column
+    axes_tsi[left_index].tick_params(
+        axis='y',
+        left=True,
+        labelleft=True
+    )
+
+    axes_tsi[right_index].tick_params(
+        axis='y',
+        left=False,
+        labelleft=False
+    )
+
+    axes_cardiac[left_index].tick_params(
+        axis='y',
+        left=True,
+        labelleft=True
+    )
+
+    axes_cardiac[right_index].tick_params(
+        axis='y',
+        left=False,
+        labelleft=False
+    )
+
+    # Remove the left spine from the right-column graphs
+    axes_tsi[right_index].spines['left'].set_visible(False)
+    axes_cardiac[right_index].spines['left'].set_visible(False)
+
+
+# Index 4 is row 3, column 1
+axes_tsi[4].set_ylabel(
+    'TSI Fit Factor',
+    fontsize=16,
+    labelpad=12
+)
+
+axes_cardiac[4].set_ylabel(
+    'Cardiac peak height',
+    fontsize=16,
+    labelpad=12
+)
+
+
+plt.show()

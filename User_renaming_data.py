@@ -6,13 +6,15 @@ from datetime import datetime
 import pandas as pd
 
 
-participants_information = pd.read_excel(r'C:\Users\Administrator\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Signals\Participants.xlsx')
+participants_information = pd.read_excel(
+    r'C:\Users\Administrator\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Signals\Participants.xlsx'
+)
 
 raw_data_directory = r'C:\Users\Administrator\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Raw Data'
 
-directory = r"C:\Users\Administrator\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Data to screen"
+directory = r'C:\Users\Administrator\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Data to screen'
 
-folder_to_move = ["Sine_3"]
+folder_to_move = ["Sine_4"]
 
 
 def get_file_datetime(filename):
@@ -68,6 +70,15 @@ def make_perturbation_names(perturbation_order, prefix):
     return new_names
 
 
+def make_brain_file_name(folder_name, old_filename):
+    group_name, participant_number = folder_name.split("_", 1)
+
+    group_letter = group_name[0].upper()
+    file_extension = os.path.splitext(old_filename)[1]
+
+    return f"Artinis_{group_letter}{participant_number}{file_extension}"
+
+
 for folder_name in folder_to_move:
 
     print()
@@ -79,7 +90,9 @@ for folder_name in folder_to_move:
         print("Participant folder not found:", old_participant_folder)
         continue
 
-    participant_row = participants_information[participants_information["ID"] == folder_name]
+    participant_row = participants_information[
+        participants_information["ID"] == folder_name
+    ]
 
     if participant_row.empty:
         print("No row found in Excel for:", folder_name)
@@ -91,12 +104,30 @@ for folder_name in folder_to_move:
     pre_perturbations = [x.strip() for x in pre_perturbations.split(",")]
     post_perturbations = [x.strip() for x in post_perturbations.split(",")]
 
-    old_grip_data_folder = os.path.join(old_participant_folder, "Grip data")
-    old_brain_data_folder = os.path.join(old_participant_folder, "Brain data")
+    old_grip_data_folder = os.path.join(
+        old_participant_folder,
+        "Grip data"
+    )
 
-    new_participant_folder = os.path.join(directory, folder_name)
-    new_grip_data_folder = os.path.join(new_participant_folder, "Grip data")
-    new_brain_data_folder = os.path.join(new_participant_folder, "Brain data")
+    old_brain_data_folder = os.path.join(
+        old_participant_folder,
+        "Brain data"
+    )
+
+    new_participant_folder = os.path.join(
+        directory,
+        folder_name
+    )
+
+    new_grip_data_folder = os.path.join(
+        new_participant_folder,
+        "Grip data"
+    )
+
+    new_brain_data_folder = os.path.join(
+        new_participant_folder,
+        "Brain data"
+    )
 
     if not os.path.exists(old_grip_data_folder):
         print("Grip data folder not found")
@@ -117,24 +148,39 @@ for folder_name in folder_to_move:
     files_with_time.sort(key=lambda x: x[1])
 
     if len(files_with_time) != 24:
-        print("Problem: I did not find 24 csv files with time.")
+        print("Problem: I did not find 24 CSV files with time.")
         print("Number of files found:", len(files_with_time))
         continue
+
+    print("\nTimes of all 24 files:")
+
+    for i, (_, file_time) in enumerate(files_with_time, start=1):
+        print(f"{i}. {file_time.strftime('%H:%M:%S')}")
 
     pre_files = files_with_time[0:6]
     training_files = files_with_time[6:16]
     post_files = files_with_time[16:22]
     isometric_files = files_with_time[22:24]
 
-    pre_new_names = make_perturbation_names(pre_perturbations, "Pre")
-    post_new_names = make_perturbation_names(post_perturbations, "Post")
+    pre_new_names = make_perturbation_names(
+        pre_perturbations,
+        "Pre"
+    )
+
+    post_new_names = make_perturbation_names(
+        post_perturbations,
+        "Post"
+    )
 
     training_new_names = []
 
     for i in range(1, 11):
         training_new_names.append(f"Training_{i}.csv")
 
-    isometric_new_names = ["Isometric_high.csv", "Isometric_low.csv"]
+    isometric_new_names = [
+        "Isometric_high.csv",
+        "Isometric_low.csv"
+    ]
 
     old_files = []
     new_names = []
@@ -157,8 +203,15 @@ for folder_name in folder_to_move:
 
     for old_name, new_name in zip(old_files, new_names):
 
-        old_path = os.path.join(old_grip_data_folder, old_name)
-        new_path = os.path.join(new_grip_data_folder, new_name)
+        old_path = os.path.join(
+            old_grip_data_folder,
+            old_name
+        )
+
+        new_path = os.path.join(
+            new_grip_data_folder,
+            new_name
+        )
 
         shutil.copy2(old_path, new_path)
 
@@ -166,15 +219,65 @@ for folder_name in folder_to_move:
 
     if os.path.exists(old_brain_data_folder):
 
-        shutil.copytree(
-            old_brain_data_folder,
-            new_brain_data_folder,
-            dirs_exist_ok=True
-        )
+        brain_files = []
 
-        print("Brain data copied")
+        for filename in os.listdir(old_brain_data_folder):
+            file_path = os.path.join(
+                old_brain_data_folder,
+                filename
+            )
+
+            if os.path.isfile(file_path):
+                brain_files.append(filename)
+
+        if len(brain_files) == 1:
+
+            os.makedirs(
+                new_brain_data_folder,
+                exist_ok=True
+            )
+
+            old_brain_filename = brain_files[0]
+
+            new_brain_filename = make_brain_file_name(
+                folder_name,
+                old_brain_filename
+            )
+
+            old_brain_path = os.path.join(
+                old_brain_data_folder,
+                old_brain_filename
+            )
+
+            new_brain_path = os.path.join(
+                new_brain_data_folder,
+                new_brain_filename
+            )
+
+            shutil.copy2(
+                old_brain_path,
+                new_brain_path
+            )
+
+            print(
+                old_brain_filename,
+                "->",
+                new_brain_filename
+            )
+
+        else:
+            print(
+                "Problem: Expected one brain data file, but found:",
+                len(brain_files)
+            )
 
     else:
         print("Brain data folder not found")
 
     print("Finished:", folder_name)
+
+    print("\nTraining times, files 7 to 16:")
+
+    for i in range(6, 16):
+        file_time = files_with_time[i][1]
+        print(file_time.strftime("%H:%M:%S"))

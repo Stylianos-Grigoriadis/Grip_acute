@@ -1683,15 +1683,24 @@ def artinis_read_file_10_events_plot(directory, name, plot_every_n=100, write_ma
     ):
         print("")
         print(title)
-        print("Event\tTime")
+        print("Event\tTime\tColumn A")
 
         for event_number, idx in enumerate(
             sorted(real_event_indices),
             start=1
         ):
+            column_a_value = data["Sample number"][idx]
+
+            if (
+                column_a_value is not None
+                and float(column_a_value).is_integer()
+            ):
+                column_a_value = int(column_a_value)
+
             print(
                 f"{event_number}\t"
-                f"{get_event_time_string(idx)}"
+                f"{get_event_time_string(idx)}\t"
+                f"{column_a_value}"
             )
 
         print("")

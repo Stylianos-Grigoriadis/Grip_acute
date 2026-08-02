@@ -6,6 +6,7 @@ import statistics
 import numpy as np
 from numpy.fft import fft, fftfreq
 import colorednoise as cn
+import os
 
 def FFT(var,fs):
     dt = 1 / fs
@@ -309,3 +310,193 @@ def pink_noise_generator2(number_of_sets,targets_per_set,RM,time_per_set,percent
     step_for_time = total_time / (number_of_sets * targets_per_set)
     Time = np.arange(0, total_time, step_for_time)
     return signal,Time
+
+def Residual_analysis(var, cutoff_frequencies, fs, number_of_fit_points=10, plot=True, save=None):
+
+    """
+    Perform residual analysis for one variable.
+
+    Parameters
+    ----------
+    var : array-like
+        Original time series.
+
+    cutoff_frequencies : list or array-like
+        Cutoff frequencies to test.
+
+    fs : float, default=1000
+        Sampling frequency in Hz.
+
+    number_of_fit_points : int, default=10
+        Number of highest cutoff frequencies used for the linear fit.
+
+    plot : bool, default=True
+        If True, display the residual-analysis plot.
+
+    save : tuple or None, default=None
+        Tuple containing (name, directory). For example:
+        ("participant_1.png", r"C:\\Results\\Residual analysis")
+        If None, the plot is not saved.
+
+    Returns
+    -------
+    Fc : float
+        Tested cutoff frequency whose RMS residual is closest to the
+        y-intercept of the fitted line.
+    """
+
+    var = np.asarray(var, dtype=float)
+
+    # Convert the cutoff frequencies to a sorted NumPy array
+    cutoff_frequencies = np.asarray(
+        sorted(cutoff_frequencies),
+        dtype=float
+    )
+
+    # Calculate the RMS residual for every cutoff frequency
+    rms_residual = []
+
+    for fc in cutoff_frequencies:
+
+        var_filtered = Butterworth(
+            fs,
+            fc,
+            var
+        )
+
+        residual = var - var_filtered
+
+        rms_residual.append(
+            np.sqrt(np.mean(residual ** 2))
+        )
+
+    rms_residual = np.asarray(rms_residual)
+
+    # Use the highest cutoff frequencies for the linear fit
+    fit_frequencies = cutoff_frequencies[-number_of_fit_points:]
+    fit_residuals = rms_residual[-number_of_fit_points:]
+
+    # Fit the straight line: y = slope*x + intercept
+    slope, intercept = np.polyfit(
+        fit_frequencies,
+        fit_residuals,
+        1
+    )
+
+    # Evaluate the fitted line across all tested cutoff frequencies
+    fitted_line = np.polyval(
+        [slope, intercept],
+        cutoff_frequencies
+    )
+
+    # Find the tested residual closest to the y-intercept
+    closest_index = np.argmin(
+        np.abs(rms_residual - intercept)
+    )
+
+    Fc = cutoff_frequencies[closest_index]
+
+    # Create the figure when it needs to be displayed or saved
+    if plot or save is not None:
+
+        fig, ax = plt.subplots(figsize=(8, 5))
+
+        # RMS residual curve
+        ax.plot(
+            cutoff_frequencies,
+            rms_residual,
+            marker='o',
+            color='#2F7FBF',
+            label='RMS residual'
+        )
+
+        # Points used for the linear fit
+        ax.scatter(
+            fit_frequencies,
+            fit_residuals,
+            color='#F28C38',
+            s=55,
+            zorder=3,
+            label=f'Last {number_of_fit_points} cutoff values'
+        )
+
+        # Extrapolated fitted line
+        ax.plot(
+            cutoff_frequencies,
+            fitted_line,
+            linestyle='--',
+            color='#F28C38',
+            linewidth=2,
+            label='Extrapolated linear fit'
+        )
+
+        # Horizontal line at the y-intercept
+        ax.axhline(
+            y=intercept,
+            color='black',
+            linestyle='--',
+            label=f'Intercept = {intercept:.4f}'
+        )
+
+        # Selected cutoff frequency
+        ax.axvline(
+            x=Fc,
+            color='#FF1515',
+            linestyle=':',
+            linewidth=2,
+            label=f'Fc = {Fc:g} Hz'
+        )
+
+        # Mark the selected point
+        ax.scatter(
+            Fc,
+            rms_residual[closest_index],
+            color='#FF1515',
+            s=70,
+            zorder=4
+        )
+
+        ax.set_xlabel('Cutoff frequency (Hz)')
+        ax.set_ylabel('RMS residual')
+        ax.set_title('Residual Analysis')
+        ax.grid(alpha=0.25)
+        ax.legend()
+
+        fig.tight_layout()
+
+        # save must have the form: (name, directory)
+        if save is not None:
+
+            if not isinstance(save, tuple) or len(save) != 2:
+                raise ValueError(
+                    "save must be None or a tuple: (name, directory)."
+                )
+
+            name, save_dir = save
+
+            # Create the directory if it does not already exist
+            os.makedirs(save_dir, exist_ok=True)
+
+            # Add .png if the name does not contain an extension
+            if not os.path.splitext(name)[1]:
+                name += '.png'
+
+            save_path = os.path.join(
+                save_dir,
+                name
+            )
+
+            fig.savefig(
+                save_path,
+                dpi=300,
+                bbox_inches='tight'
+            )
+
+            print(f"Plot saved to: {save_path}")
+
+        if plot:
+            plt.show()
+        else:
+            plt.close(fig)
+
+    return Fc

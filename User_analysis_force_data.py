@@ -7,6 +7,7 @@ import glob
 import os
 
 
+
 directory = r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip acute perturbation\Data\Data to screen\P6\Force data'
 os.chdir(directory)
 

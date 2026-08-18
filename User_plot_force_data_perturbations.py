@@ -9,7 +9,7 @@ import seaborn as sns
 
 results_directory = r"C:\Users\Administrator\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Results"
 
-sd_factor = 3
+sd_factor = 2
 asymptote_fraction = 0.95
 
 file_name = f"Perturbation_results_SD_factor_{sd_factor}_Asymptote_{asymptote_fraction}.xlsx"

@@ -1,15 +1,16 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import numpy as np
 
 
 ################################
 ##### Load perturbation data #####
 ################################
 
-results_directory = r"C:\Users\Administrator\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Results"
+results_directory = r"C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Results"
 
-sd_factor = 2
+sd_factor = 3
 asymptote_fraction = 0.95
 
 file_name = f"Perturbation_results_SD_factor_{sd_factor}_Asymptote_{asymptote_fraction}.xlsx"
@@ -34,7 +35,7 @@ group_colors = {
 ##### Perturbation boxplot function #####
 #####################################
 
-def plot_perturbation_boxplots(perturbation_results, summary, method, direction, group_colors, sd_factor, show_datapoints=True):
+def plot_perturbation_boxplots(perturbation_results, summary, method, direction, group_colors, sd_factor, show_datapoints=True, connect_participants=False, show_ID=False):
 
     if summary == "Min":
         summary_name = "Minimum"
@@ -79,6 +80,8 @@ def plot_perturbation_boxplots(perturbation_results, summary, method, direction,
 
     fig, ax = plt.subplots(figsize=(9, 7))
 
+    box_width = 0.65
+
     sns.boxplot(
         data=data,
         x="Condition",
@@ -87,28 +90,101 @@ def plot_perturbation_boxplots(perturbation_results, summary, method, direction,
         order=["Pre", "Post"],
         hue_order=group_order,
         palette=group_colors,
-        width=0.65,
+        width=box_width,
         showfliers=not show_datapoints,
         ax=ax
     )
 
-    if show_datapoints:
-        sns.stripplot(
-            data=data,
-            x="Condition",
-            y="Adaptation Time",
-            hue="Group",
-            order=["Pre", "Post"],
-            hue_order=group_order,
-            palette=group_colors,
-            dodge=True,
-            jitter=True,
-            size=6,
-            alpha=0.75,
-            edgecolor="black",
-            linewidth=0.5,
-            ax=ax
-        )
+    group_offsets = np.linspace(
+        -box_width / 2 + box_width / (2 * len(group_order)),
+        box_width / 2 - box_width / (2 * len(group_order)),
+        len(group_order)
+    )
+
+    rng = np.random.default_rng(1)
+
+    for group_index, group in enumerate(group_order):
+
+        group_data = data[data["Group"] == group]
+
+        IDs = group_data["ID"].unique()
+
+        for ID in IDs:
+
+            participant_data = group_data[group_data["ID"] == ID]
+
+            pre_value = participant_data.loc[
+                participant_data["Condition"] == "Pre",
+                "Adaptation Time"
+            ]
+
+            post_value = participant_data.loc[
+                participant_data["Condition"] == "Post",
+                "Adaptation Time"
+            ]
+
+            if len(pre_value) == 0 or len(post_value) == 0:
+                continue
+
+            pre_value = pre_value.iloc[0]
+            post_value = post_value.iloc[0]
+
+            if pd.isna(pre_value) or pd.isna(post_value):
+                continue
+
+            jitter = rng.uniform(-0.035, 0.035)
+
+            x_pre = 0 + group_offsets[group_index] + jitter
+            x_post = 1 + group_offsets[group_index] + jitter
+
+            if connect_participants:
+                ax.plot(
+                    [x_pre, x_post],
+                    [pre_value, post_value],
+                    color=group_colors[group],
+                    alpha=0.30,
+                    linewidth=1
+                )
+
+            if show_datapoints:
+                ax.scatter(
+                    x_pre,
+                    pre_value,
+                    color=group_colors[group],
+                    edgecolor="black",
+                    linewidth=0.5,
+                    s=35,
+                    zorder=3
+                )
+
+                ax.scatter(
+                    x_post,
+                    post_value,
+                    color=group_colors[group],
+                    edgecolor="black",
+                    linewidth=0.5,
+                    s=35,
+                    zorder=3
+                )
+
+            if show_ID:
+                ax.annotate(
+                    str(ID),
+                    (x_pre, pre_value),
+                    xytext=(0, 6),
+                    textcoords="offset points",
+                    ha="center",
+                    fontsize=8
+                )
+
+                ax.annotate(
+                    str(ID),
+                    (x_post, post_value),
+                    xytext=(0, 6),
+                    textcoords="offset points",
+                    ha="center",
+                    fontsize=8
+                )
 
     ax.set_xlabel("")
     ax.set_ylabel("Adaptation Time (s)", fontsize=14)
@@ -138,6 +214,7 @@ def plot_perturbation_boxplots(perturbation_results, summary, method, direction,
 
     plt.tight_layout()
     plt.show()
+
 
 def plot_perturbation_difference_boxplots(perturbation_results, summary, method, group_colors, sd_factor, show_datapoints=True):
 
@@ -267,7 +344,9 @@ plot_perturbation_boxplots(
     direction="Down",
     group_colors=group_colors,
     show_datapoints=True,
-    sd_factor=sd_factor
+    sd_factor=sd_factor,
+    connect_participants=True,
+    show_ID=True
 )
 plot_perturbation_boxplots(
     perturbation_results,
@@ -276,8 +355,9 @@ plot_perturbation_boxplots(
     direction="Up",
     group_colors=group_colors,
     show_datapoints=True,
-    sd_factor=sd_factor
-
+    sd_factor=sd_factor,
+    connect_participants=True,
+    show_ID=True
 )
 
 

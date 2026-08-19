@@ -1551,7 +1551,7 @@ def artinis_read_file(directory, name):
     data = data.select(new_order)
     return data, sampling_frequency
 
-def artinis_read_file_10_events_plot(directory, name, plot_every_n=100, write_manual_events_to_excel=True, recording_start_time=None, event_time_column=None):
+def artinis_read_file_10_events_plot(directory, name, plot_every_n=100, write_manual_events_to_excel=True, recording_start_time=None, event_time_column=None, plot=True):
     """
     Reads an Artinis file and creates event-based fNIRS cuts.
 
@@ -1740,6 +1740,52 @@ def artinis_read_file_10_events_plot(directory, name, plot_every_n=100, write_ma
 
         pre_event_indices.append(pre_idx)
         derived_end_indices.append(end_idx)
+
+    if not plot:
+        final_event_indices = sorted(
+            pre_event_indices
+            + list_indices
+            + derived_end_indices
+        )
+
+        list_sets = []
+
+        n_triplets = len(final_event_indices) // 3
+
+        for i in range(n_triplets):
+            idx1 = final_event_indices[3 * i]
+            idx2 = final_event_indices[3 * i + 1]
+            idx3 = final_event_indices[3 * i + 2]
+
+            start_idx = min(
+                idx1,
+                idx2,
+                idx3
+            )
+
+            end_idx = max(
+                idx1,
+                idx2,
+                idx3
+            )
+
+            df_set = data.slice(
+                start_idx,
+                end_idx - start_idx + 1
+            )
+
+            list_sets.append(df_set)
+
+        return (
+            data,
+            sampling_frequency,
+            list_indices,
+            list_time_events,
+            pre_event_indices,
+            derived_end_indices,
+            final_event_indices,
+            list_sets
+        )
 
     # -------------------------------------------------
     # Plot

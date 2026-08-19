@@ -215,6 +215,170 @@ def plot_perturbation_boxplots(perturbation_results, summary, method, direction,
     plt.tight_layout()
     plt.show()
 
+def plot_perturbation_group_subplots(perturbation_results, summary, method, direction, group_colors, sd_factor, show_datapoints=True, connect_participants=False, show_ID=False):
+
+    if summary == "Min":
+        summary_name = "Minimum"
+    elif summary == "Minimum":
+        summary_name = "Minimum"
+    elif summary == "Average":
+        summary_name = "Average"
+    else:
+        raise ValueError("summary must be 'Average', 'Min', or 'Minimum'")
+
+    if direction not in ["Up", "Down"]:
+        raise ValueError("direction must be 'Up' or 'Down'")
+
+    if method == "SD":
+        pre_column = f"{summary_name} Pre {direction} Adaptation Time SD {sd_factor}"
+        post_column = f"{summary_name} Post {direction} Adaptation Time SD {sd_factor}"
+
+    elif method == "Asymptote":
+        pre_column = f"{summary_name} Pre {direction} Adaptation Time Asymptote"
+        post_column = f"{summary_name} Post {direction} Adaptation Time Asymptote"
+
+    else:
+        raise ValueError("method must be 'SD' or 'Asymptote'")
+
+    data = perturbation_results[
+        ["ID", "Group", pre_column, post_column]
+    ].copy()
+
+    data = data.melt(
+        id_vars=["ID", "Group"],
+        value_vars=[pre_column, post_column],
+        var_name="Condition",
+        value_name="Adaptation Time"
+    )
+
+    data["Condition"] = data["Condition"].replace({
+        pre_column: "Pre",
+        post_column: "Post"
+    })
+
+    group_order = list(group_colors.keys())
+
+    fig, axes = plt.subplots(
+        1,
+        len(group_order),
+        figsize=(15, 6),
+        sharey=True
+    )
+
+    rng = np.random.default_rng(1)
+
+    for ax, group in zip(axes, group_order):
+
+        group_data = data[data["Group"] == group]
+
+        sns.boxplot(
+            data=group_data,
+            x="Condition",
+            y="Adaptation Time",
+            order=["Pre", "Post"],
+            color=group_colors[group],
+            width=0.5,
+            showfliers=not show_datapoints,
+            ax=ax
+        )
+
+        IDs = group_data["ID"].unique()
+
+        for ID in IDs:
+
+            participant_data = group_data[group_data["ID"] == ID]
+
+            pre_value = participant_data.loc[
+                participant_data["Condition"] == "Pre",
+                "Adaptation Time"
+            ]
+
+            post_value = participant_data.loc[
+                participant_data["Condition"] == "Post",
+                "Adaptation Time"
+            ]
+
+            if len(pre_value) == 0 or len(post_value) == 0:
+                continue
+
+            pre_value = pre_value.iloc[0]
+            post_value = post_value.iloc[0]
+
+            if pd.isna(pre_value) or pd.isna(post_value):
+                continue
+
+            jitter = rng.uniform(-0.06, 0.06)
+
+            x_pre = 0 + jitter
+            x_post = 1 + jitter
+
+            if connect_participants:
+                ax.plot(
+                    [x_pre, x_post],
+                    [pre_value, post_value],
+                    color=group_colors[group],
+                    alpha=0.35,
+                    linewidth=1
+                )
+
+            if show_datapoints:
+                ax.scatter(
+                    x_pre,
+                    pre_value,
+                    color=group_colors[group],
+                    edgecolor="black",
+                    linewidth=0.5,
+                    s=40,
+                    zorder=3
+                )
+
+                ax.scatter(
+                    x_post,
+                    post_value,
+                    color=group_colors[group],
+                    edgecolor="black",
+                    linewidth=0.5,
+                    s=40,
+                    zorder=3
+                )
+
+            if show_ID:
+                ax.annotate(
+                    str(ID),
+                    (x_pre, pre_value),
+                    xytext=(0, 6),
+                    textcoords="offset points",
+                    ha="center",
+                    fontsize=8
+                )
+
+                ax.annotate(
+                    str(ID),
+                    (x_post, post_value),
+                    xytext=(0, 6),
+                    textcoords="offset points",
+                    ha="center",
+                    fontsize=8
+                )
+
+        ax.set_title(group, fontsize=15)
+        ax.set_xlabel("")
+        ax.set_ylabel("Adaptation Time (s)", fontsize=13)
+
+        ax.tick_params(axis="both", labelsize=12)
+
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+
+        ax.grid(axis="y", alpha=0.2)
+
+    fig.suptitle(
+        f"{summary_name} Adaptation Time – {direction} Perturbation",
+        fontsize=17
+    )
+
+    plt.tight_layout(rect=[0, 0, 1, 0.93])
+    plt.show()
 
 def plot_perturbation_difference_boxplots(perturbation_results, summary, method, group_colors, sd_factor, show_datapoints=True):
 
@@ -336,6 +500,28 @@ def plot_perturbation_difference_boxplots(perturbation_results, summary, method,
     plt.tight_layout()
     plt.show()
 
+plot_perturbation_group_subplots(
+    perturbation_results,
+    summary="Min",
+    method="SD",
+    direction="Down",
+    group_colors=group_colors,
+    show_datapoints=True,
+    sd_factor=sd_factor,
+    connect_participants=True,
+    show_ID=True
+)
+plot_perturbation_group_subplots(
+    perturbation_results,
+    summary="Min",
+    method="SD",
+    direction="Up",
+    group_colors=group_colors,
+    show_datapoints=True,
+    sd_factor=sd_factor,
+    connect_participants=True,
+    show_ID=True
+)
 
 plot_perturbation_boxplots(
     perturbation_results,

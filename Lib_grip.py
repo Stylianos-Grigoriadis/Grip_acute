@@ -2462,15 +2462,17 @@ def fNIRS_check_quality(y, fs, name, plot=True):
         peak_height : float
             Fitted cardiac peak height above baseline (dB). If the fit failed,
             this is the max PSD (dB) within 0.6–1.8 Hz.
+        max_min_peak_height : float
+            Difference between the maximum and minimum actual PSD values
+            within the 0.6–1.8 Hz cardiac band.
 
         Notes
         -----
         - Using the fitted amplitude 'a' (peak above baseline) is slightly different
           from thresholding absolute PSD level (a + c); both are reasonable—be consistent.
         - If there are too few frequency bins in 0.6–1.8 Hz (e.g., very short data),
-          the function returns (False, NaN) and optionally plots a warning figure.
+          the function returns (False, NaN, NaN) and optionally plots a warning figure.
         """
-
 
     # 1) Remove mean (kill 0 Hz/DC)
     y = y - np.mean(y)
@@ -2495,7 +2497,12 @@ def fNIRS_check_quality(y, fs, name, plot=True):
             plt.legend()
             plt.tight_layout()
             plt.show()
-        return False, np.nan
+
+        return False, np.nan, np.nan
+
+    # Difference between the actual maximum and minimum
+    # PSD values inside the cardiac band
+    max_min_peak_height = np.max(P_hr) - np.min(P_hr)
 
     # 4) Fit a Gaussian to the band
     def gaussian(x, a, x0, sigma, c):
@@ -2505,11 +2512,19 @@ def fNIRS_check_quality(y, fs, name, plot=True):
     x0 = f_hr[np.argmax(P_hr)]
     sigma0 = 0.2
     c0 = np.min(P_hr)
+
     try:
-        popt, _ = curve_fit(gaussian, f_hr, P_hr, p0=[a0, x0, sigma0, c0], maxfev=10000)
+        popt, _ = curve_fit(
+            gaussian,
+            f_hr,
+            P_hr,
+            p0=[a0, x0, sigma0, c0],
+            maxfev=10000
+        )
 
         a, x0, sigma, c = popt
         peak_height = a
+
     except Exception:
         peak_height = np.max(P_hr)  # fallback if fit fails
 
@@ -2518,36 +2533,107 @@ def fNIRS_check_quality(y, fs, name, plot=True):
 
     # 6) Optional plot
     if plot:
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(15, 7), sharex=False, sharey=False)
+        fig, (ax1, ax2) = plt.subplots(
+            2,
+            1,
+            figsize=(15, 7),
+            sharex=False,
+            sharey=False
+        )
 
         # ---------- TOP: full PSD ----------
-        ax1.plot(f, Pxx_dB, color='black', lw=1.2, label='PSD (Welch, dB)')
-        ax1.axvspan(0.6, 1.8, color='orange', alpha=0.2, label='Cardiac band (0.6–1.8 Hz)')
+        ax1.plot(
+            f,
+            Pxx_dB,
+            color='black',
+            lw=1.2,
+            label='PSD (Welch, dB)'
+        )
+
+        ax1.axvspan(
+            0.6,
+            1.8,
+            color='orange',
+            alpha=0.2,
+            label='Cardiac band (0.6–1.8 Hz)'
+        )
+
         baseline = np.min(P_hr)
-        ax1.axhline(baseline, color='gray', linestyle='--', label='Baseline')
-        ax1.axhline(baseline + 12, color='red', linestyle='--', label='+12 dB threshold')
+
+        ax1.axhline(
+            baseline,
+            color='gray',
+            linestyle='--',
+            label='Baseline'
+        )
+
+        ax1.axhline(
+            baseline + 12,
+            color='red',
+            linestyle='--',
+            label='+12 dB threshold'
+        )
 
         # Gaussian fit
         if 'popt' in locals():
             f_fit = np.linspace(0.6, 1.8, 300)
-            ax1.plot(f_fit, gaussian(f_fit, *popt),
-                     color='red', lw=2, label='Gaussian fit (heart-rate peak)')
+
+            ax1.plot(
+                f_fit,
+                gaussian(f_fit, *popt),
+                color='red',
+                lw=2,
+                label='Gaussian fit (heart-rate peak)'
+            )
 
         ax1.set_xlabel('Frequency (Hz)')
         ax1.set_ylabel('Power (dB)')
-        ax1.set_title(f'Power Spectral Density and Cardiac Gaussian Fit for {name}')
+        ax1.set_title(
+            f'Power Spectral Density and Cardiac Gaussian Fit for {name}'
+        )
+
         ax1.legend()
         ax1.grid(alpha=0.3)
 
         # ---------- BOTTOM: zoomed view ----------
-        ax2.plot(f, Pxx_dB, color='black', lw=1.2, label='PSD (Welch, dB)')
-        ax2.axvspan(0.6, 1.8, color='orange', alpha=0.2, label='Cardiac band (0.6–1.8 Hz)')
-        ax2.axhline(baseline, color='gray', linestyle='--', label='Baseline')
-        ax2.axhline(baseline + 12, color='red', linestyle='--', label='+12 dB threshold')
+        ax2.plot(
+            f,
+            Pxx_dB,
+            color='black',
+            lw=1.2,
+            label='PSD (Welch, dB)'
+        )
+
+        ax2.axvspan(
+            0.6,
+            1.8,
+            color='orange',
+            alpha=0.2,
+            label='Cardiac band (0.6–1.8 Hz)'
+        )
+
+        ax2.axhline(
+            baseline,
+            color='gray',
+            linestyle='--',
+            label='Baseline'
+        )
+
+        ax2.axhline(
+            baseline + 12,
+            color='red',
+            linestyle='--',
+            label='+12 dB threshold'
+        )
 
         if 'popt' in locals():
-            ax2.plot(f_fit, gaussian(f_fit, *popt),
-                     color='red', lw=2, label='Gaussian fit (heart-rate peak)')
+            ax2.plot(
+                f_fit,
+                gaussian(f_fit, *popt),
+                color='red',
+                lw=2,
+                label='Gaussian fit (heart-rate peak)'
+            )
 
         ax2.set_xlim(0.4, 2)
         ax2.set_xlabel('Frequency (Hz)')
@@ -2559,7 +2645,7 @@ def fNIRS_check_quality(y, fs, name, plot=True):
         plt.tight_layout()
         plt.show()
 
-    return good, peak_height
+    return good, peak_height, max_min_peak_height
 
 def moving_standard_deviation(signal, time_window, fs, plot=False):
     """

@@ -453,13 +453,431 @@ def plot_group_boxplots_by_set(mean_training_changes_df, signal_name):
 
     return signal_data
 
-participants_directory = r'C:\Users\Administrator\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Signals'
+def plot_group_boxplots_in_subplots(mean_training_changes_df, signal_name, show_data_points=True, connect_participants=False, connect_group_mean=True):
+    signal_data = mean_training_changes_df[mean_training_changes_df["Signal"] == signal_name]
+
+    if signal_data.empty:
+        raise ValueError(f"No data found for: {signal_name}")
+
+    group_order = ["White", "Sine", "Pink"]
+
+    group_colors = {
+        "White": "#7A7A7A",
+        "Sine": "#2F7FBF",
+        "Pink": "#E75480"
+    }
+
+    set_numbers = np.arange(1, 11)
+
+    global_minimum = signal_data["Mean Training Change"].min()
+    global_maximum = signal_data["Mean Training Change"].max()
+
+    y_range = global_maximum - global_minimum
+    y_padding = y_range * 0.05 if y_range > 0 else 0.1
+
+    fig, axes = plt.subplots(1, 3, figsize=(21, 7), sharex=True, sharey=True)
+
+    random_generator = np.random.default_rng(10)
+    legend_handles = []
+
+    for ax, group in zip(axes, group_order):
+        group_data = signal_data[signal_data["Group"] == group]
+
+        boxplot_values = []
+
+        for set_number in set_numbers:
+            values = group_data.loc[group_data["Set"] == set_number, "Mean Training Change"].to_numpy()
+            values = values[np.isfinite(values)]
+
+            if len(values) == 0:
+                values = np.array([np.nan])
+
+            boxplot_values.append(values)
+
+        boxplot = ax.boxplot(boxplot_values, positions=set_numbers, widths=0.55, patch_artist=True, showfliers=False, manage_ticks=False)
+
+        for box in boxplot["boxes"]:
+            box.set_facecolor(group_colors[group])
+            box.set_alpha(0.35)
+
+        for median in boxplot["medians"]:
+            median.set_color("black")
+            median.set_linewidth(2)
+
+        participant_IDs = group_data["ID"].unique()
+
+        participant_jitter = {
+            participant_ID: random_generator.uniform(-0.10, 0.10)
+            for participant_ID in participant_IDs
+        }
+
+        for participant_ID in participant_IDs:
+            participant_data = group_data[group_data["ID"] == participant_ID]
+            participant_data = participant_data.set_index("Set").reindex(set_numbers)
+
+            participant_values = participant_data["Mean Training Change"].to_numpy()
+            x_positions = set_numbers + participant_jitter[participant_ID]
+            valid_values = np.isfinite(participant_values)
+
+            if connect_participants:
+                ax.plot(x_positions[valid_values], participant_values[valid_values], color=group_colors[group], linewidth=0.7, alpha=0.35, zorder=2)
+
+            if show_data_points:
+                ax.scatter(x_positions[valid_values], participant_values[valid_values], color=group_colors[group], edgecolor="black", linewidth=0.5, s=40, alpha=0.85, zorder=3)
+
+        if connect_group_mean:
+            group_means = group_data.groupby("Set")["Mean Training Change"].mean()
+            group_means = group_means.reindex(set_numbers)
+
+            ax.plot(set_numbers, group_means.to_numpy(), color="black", linewidth=3.5, marker="o", markerfacecolor=group_colors[group], markeredgecolor="black", markersize=7, zorder=4)
+
+        ax.axhline(0, color="black", linestyle="--", linewidth=1)
+        ax.set_xticks(set_numbers)
+        ax.set_xlabel("Training set")
+        ax.set_title(f"{group} (n = {len(participant_IDs)})")
+        ax.set_ylim(global_minimum - y_padding, global_maximum + y_padding)
+        ax.grid(axis="y", alpha=0.3)
+
+    axes[0].set_ylabel("Mean training change from baseline")
+
+    if show_data_points:
+        participant_point = axes[0].scatter([], [], color="gray", edgecolor="black", linewidth=0.5, s=40, label="Participant")
+        legend_handles.append(participant_point)
+
+    if connect_participants:
+        participant_line = axes[0].plot([], [], color="gray", linewidth=0.7, alpha=0.5, label="Participant progression")[0]
+        legend_handles.append(participant_line)
+
+    if connect_group_mean:
+        group_mean_line = axes[0].plot([], [], color="black", linewidth=3.5, marker="o", label="Group mean")[0]
+        legend_handles.append(group_mean_line)
+
+    fig.suptitle(signal_name, fontsize=16, y=0.99)
+
+    if legend_handles:
+        fig.legend(handles=legend_handles, loc="upper center", bbox_to_anchor=(0.5, 0.94), ncol=len(legend_handles))
+
+    plt.tight_layout(rect=[0, 0, 1, 0.89])
+    plt.show()
+
+def plot_hemoglobin_and_force_by_group(mean_training_changes_df, spatial_error_df, hemoglobin_signal, spatial_variable, show_ID_names=True):
+    hemoglobin_data = mean_training_changes_df[
+        mean_training_changes_df["Signal"] == hemoglobin_signal
+    ].copy()
+
+    spatial_error_data = spatial_error_df.copy()
+
+    hemoglobin_data["ID"] = hemoglobin_data["ID"].astype(str)
+    spatial_error_data["ID"] = spatial_error_data["ID"].astype(str)
+
+    spatial_columns = [
+        f"{spatial_variable} Training {set_number}"
+        for set_number in range(1, 11)
+    ]
+
+    missing_columns = [
+        column
+        for column in spatial_columns
+        if column not in spatial_error_data.columns
+    ]
+
+    if missing_columns:
+        raise ValueError(f"These columns were not found: {missing_columns}")
+
+    common_IDs = sorted(
+        set(hemoglobin_data["ID"]).intersection(
+            set(spatial_error_data["ID"])
+        )
+    )
+
+    if len(common_IDs) == 0:
+        raise ValueError("No matching participant IDs were found between the two dataframes.")
+
+    group_order = ["White", "Sine", "Pink"]
+    set_numbers = np.arange(1, 11)
+
+    participant_colors = plt.cm.tab20(
+        np.linspace(0, 1, len(common_IDs))
+    )
+
+    color_by_ID = dict(
+        zip(common_IDs, participant_colors)
+    )
+
+    fig, axes = plt.subplots(2, 3, figsize=(22, 11), sharex=True, sharey="row")
+
+    participant_artists = {
+        participant_ID: []
+        for participant_ID in common_IDs
+    }
+
+    legend_handles = []
+    legend_IDs = []
+
+    for column_index, group in enumerate(group_order):
+        hemoglobin_axis = axes[0, column_index]
+        spatial_axis = axes[1, column_index]
+
+        group_hemoglobin_data = hemoglobin_data[
+            hemoglobin_data["Group"] == group
+        ]
+
+        group_IDs = [
+            participant_ID
+            for participant_ID in common_IDs
+            if participant_ID in group_hemoglobin_data["ID"].values
+        ]
+
+        for participant_ID in group_IDs:
+            participant_color = color_by_ID[participant_ID]
+
+            participant_hemoglobin_data = group_hemoglobin_data[
+                group_hemoglobin_data["ID"] == participant_ID
+            ]
+
+            participant_hemoglobin_data = participant_hemoglobin_data.set_index(
+                "Set"
+            ).reindex(set_numbers)
+
+            hemoglobin_values = participant_hemoglobin_data[
+                "Mean Training Change"
+            ].to_numpy(dtype=float)
+
+            hemoglobin_line = hemoglobin_axis.plot(
+                set_numbers,
+                hemoglobin_values,
+                marker="o",
+                markersize=5,
+                linewidth=1.2,
+                color=participant_color,
+                label=participant_ID
+            )[0]
+
+            participant_artists[participant_ID].append(
+                hemoglobin_line
+            )
+
+            participant_spatial_data = spatial_error_data[
+                spatial_error_data["ID"] == participant_ID
+            ]
+
+            spatial_values = participant_spatial_data[
+                spatial_columns
+            ].iloc[0].to_numpy(dtype=float)
+
+            spatial_line = spatial_axis.plot(
+                set_numbers,
+                spatial_values,
+                marker="o",
+                markersize=5,
+                linewidth=1.2,
+                color=participant_color,
+                label=participant_ID
+            )[0]
+
+            participant_artists[participant_ID].append(
+                spatial_line
+            )
+
+            if show_ID_names:
+                valid_hemoglobin = np.where(
+                    np.isfinite(hemoglobin_values)
+                )[0]
+
+                if len(valid_hemoglobin) > 0:
+                    final_index = valid_hemoglobin[-1]
+
+                    hemoglobin_text = hemoglobin_axis.annotate(
+                        participant_ID,
+                        (
+                            set_numbers[final_index],
+                            hemoglobin_values[final_index]
+                        ),
+                        xytext=(5, 0),
+                        textcoords="offset points",
+                        fontsize=8,
+                        color=participant_color,
+                        va="center"
+                    )
+
+                    participant_artists[participant_ID].append(
+                        hemoglobin_text
+                    )
+
+                valid_spatial = np.where(
+                    np.isfinite(spatial_values)
+                )[0]
+
+                if len(valid_spatial) > 0:
+                    final_index = valid_spatial[-1]
+
+                    spatial_text = spatial_axis.annotate(
+                        participant_ID,
+                        (
+                            set_numbers[final_index],
+                            spatial_values[final_index]
+                        ),
+                        xytext=(5, 0),
+                        textcoords="offset points",
+                        fontsize=8,
+                        color=participant_color,
+                        va="center"
+                    )
+
+                    participant_artists[participant_ID].append(
+                        spatial_text
+                    )
+
+            legend_handles.append(
+                hemoglobin_line
+            )
+
+            legend_IDs.append(
+                participant_ID
+            )
+
+        hemoglobin_axis.axhline(
+            0,
+            color="black",
+            linestyle="--",
+            linewidth=1
+        )
+
+        hemoglobin_axis.set_title(
+            group,
+            fontsize=14
+        )
+
+        spatial_axis.set_xlabel(
+            "Training set"
+        )
+
+        hemoglobin_axis.set_xlim(
+            0.7,
+            11
+        )
+
+        spatial_axis.set_xlim(
+            0.7,
+            11
+        )
+
+        hemoglobin_axis.set_xticks(
+            set_numbers
+        )
+
+        spatial_axis.set_xticks(
+            set_numbers
+        )
+
+        hemoglobin_axis.grid(
+            alpha=0.3
+        )
+
+        spatial_axis.grid(
+            alpha=0.3
+        )
+
+    axes[0, 0].set_ylabel(
+        f"{hemoglobin_signal}\nMean change from baseline"
+    )
+
+    axes[1, 0].set_ylabel(
+        spatial_variable
+    )
+
+    unique_legend_handles = []
+    unique_legend_IDs = []
+
+    for participant_ID, legend_handle in zip(legend_IDs, legend_handles):
+        if participant_ID not in unique_legend_IDs:
+            unique_legend_IDs.append(
+                participant_ID
+            )
+
+            unique_legend_handles.append(
+                legend_handle
+            )
+
+    legend = fig.legend(
+        handles=unique_legend_handles,
+        labels=unique_legend_IDs,
+        title="Click ID to show/hide",
+        loc="center left",
+        bbox_to_anchor=(0.84, 0.5),
+        ncol=1
+    )
+
+    legend_artist_to_ID = {}
+    legend_entries = {}
+
+    for legend_line, legend_text, participant_ID in zip(
+        legend.get_lines(),
+        legend.get_texts(),
+        unique_legend_IDs
+    ):
+        legend_line.set_picker(5)
+        legend_text.set_picker(True)
+
+        legend_artist_to_ID[legend_line] = participant_ID
+        legend_artist_to_ID[legend_text] = participant_ID
+
+        legend_entries[participant_ID] = (
+            legend_line,
+            legend_text
+        )
+
+    def toggle_participant(event):
+        selected_artist = event.artist
+
+        if selected_artist not in legend_artist_to_ID:
+            return
+
+        participant_ID = legend_artist_to_ID[selected_artist]
+        artists = participant_artists[participant_ID]
+
+        new_visibility = not artists[0].get_visible()
+
+        for artist in artists:
+            artist.set_visible(
+                new_visibility
+            )
+
+        legend_line, legend_text = legend_entries[participant_ID]
+
+        if new_visibility:
+            legend_line.set_alpha(1.0)
+            legend_text.set_alpha(1.0)
+        else:
+            legend_line.set_alpha(0.2)
+            legend_text.set_alpha(0.2)
+
+        fig.canvas.draw_idle()
+
+    fig.canvas.mpl_connect(
+        "pick_event",
+        toggle_participant
+    )
+
+    fig.suptitle(
+        f"{hemoglobin_signal} and {spatial_variable}",
+        fontsize=16
+    )
+
+    plt.tight_layout(
+        rect=[0, 0, 0.83, 0.96]
+    )
+
+    plt.show()
+
+
+participants_directory = r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Signals'
 os.chdir(participants_directory)
 participants = pd.read_excel(r'Participants.xlsx')
 
 
 
-directory = r"C:\Users\Administrator\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Data to screen"
+directory = r"C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Data to screen"
 
 fs = 100
 
@@ -776,15 +1194,23 @@ for folder in os.listdir(directory):
 
 mean_training_changes_df = pd.DataFrame(mean_training_change_results)
 
-plot_group_boxplots_by_set(mean_training_changes_df, "Left Tx1 O2Hb")
-plot_group_boxplots_by_set(mean_training_changes_df, "Left Tx3 O2Hb")
-plot_group_boxplots_by_set(mean_training_changes_df, "Left Tx1 HHb")
-plot_group_boxplots_by_set(mean_training_changes_df, "Left Tx3 HHb")
+# plot_group_boxplots_by_set(mean_training_changes_df, "Left Tx1 O2Hb")
+# plot_group_boxplots_by_set(mean_training_changes_df, "Right Tx4 O2Hb")
+# plot_group_boxplots_by_set(mean_training_changes_df, "Left Tx1 HHb")
+# plot_group_boxplots_by_set(mean_training_changes_df, "Right Tx4 HHb")
+
+# plot_group_boxplots_in_subplots(mean_training_changes_df, "Left Tx1 O2Hb", show_data_points=True, connect_participants=True, connect_group_mean=True)
+# plot_group_boxplots_in_subplots(mean_training_changes_df, "Right Tx4 O2Hb", show_data_points=True, connect_participants=True, connect_group_mean=True)
+# plot_group_boxplots_in_subplots(mean_training_changes_df, "Left Tx1 HHb", show_data_points=True, connect_participants=True, connect_group_mean=True)
+# plot_group_boxplots_in_subplots(mean_training_changes_df, "Right Tx4 HHb", show_data_points=True, connect_participants=True, connect_group_mean=True)
+
+results_spatial_error_directory = r"C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Results"
+os.chdir(results_spatial_error_directory)
+spatial_error_df = pd.read_excel(r'Training_results.xlsx')
+print(spatial_error_df.columns)
 
 
-
-
-
+plot_hemoglobin_and_force_by_group(mean_training_changes_df, spatial_error_df, "Left Tx1 O2Hb", "Normalized Average Spatial Error", show_ID_names=True)
 
 
 

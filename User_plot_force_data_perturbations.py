@@ -8,9 +8,9 @@ import numpy as np
 ##### Load perturbation data #####
 ################################
 
-results_directory = r"C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Results"
+results_directory = r"C:\Users\Administrator\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Results"
 
-sd_factor = 3
+sd_factor = 2
 asymptote_fraction = 0.95
 
 file_name = f"Perturbation_results_SD_factor_{sd_factor}_Asymptote_{asymptote_fraction}.xlsx"
@@ -529,10 +529,10 @@ plot_perturbation_boxplots(
     method="SD",
     direction="Down",
     group_colors=group_colors,
-    show_datapoints=True,
+    show_datapoints=False,
     sd_factor=sd_factor,
-    connect_participants=True,
-    show_ID=True
+    connect_participants=False,
+    show_ID=False
 )
 plot_perturbation_boxplots(
     perturbation_results,
@@ -540,10 +540,10 @@ plot_perturbation_boxplots(
     method="SD",
     direction="Up",
     group_colors=group_colors,
-    show_datapoints=True,
+    show_datapoints=False,
     sd_factor=sd_factor,
-    connect_participants=True,
-    show_ID=True
+    connect_participants=False,
+    show_ID=False
 )
 
 
@@ -552,7 +552,7 @@ plot_perturbation_difference_boxplots(
     summary="Min",
     method="SD",
     group_colors=group_colors,
-    show_datapoints=True,
+    show_datapoints=False,
     sd_factor=sd_factor
 
 )

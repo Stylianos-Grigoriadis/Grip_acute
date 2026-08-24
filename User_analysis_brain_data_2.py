@@ -871,13 +871,13 @@ def plot_hemoglobin_and_force_by_group(mean_training_changes_df, spatial_error_d
     plt.show()
 
 
-participants_directory = r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Signals'
+participants_directory = r'C:\Users\Administrator\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Signals'
 os.chdir(participants_directory)
 participants = pd.read_excel(r'Participants.xlsx')
 
 
 
-directory = r"C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Data to screen"
+directory = r"C:\Users\Administrator\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Data to screen"
 
 fs = 100
 
@@ -1204,13 +1204,16 @@ mean_training_changes_df = pd.DataFrame(mean_training_change_results)
 # plot_group_boxplots_in_subplots(mean_training_changes_df, "Left Tx1 HHb", show_data_points=True, connect_participants=True, connect_group_mean=True)
 # plot_group_boxplots_in_subplots(mean_training_changes_df, "Right Tx4 HHb", show_data_points=True, connect_participants=True, connect_group_mean=True)
 
-results_spatial_error_directory = r"C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Results"
+results_spatial_error_directory = r"C:\Users\Administrator\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Results"
 os.chdir(results_spatial_error_directory)
 spatial_error_df = pd.read_excel(r'Training_results.xlsx')
 print(spatial_error_df.columns)
 
 
-plot_hemoglobin_and_force_by_group(mean_training_changes_df, spatial_error_df, "Left Tx1 O2Hb", "Normalized Average Spatial Error", show_ID_names=True)
+plot_hemoglobin_and_force_by_group(mean_training_changes_df, spatial_error_df, "Left Tx1 O2Hb", "Average Spatial Error", show_ID_names=True)
+plot_hemoglobin_and_force_by_group(mean_training_changes_df, spatial_error_df, "Right Tx4 O2Hb", "Average Spatial Error", show_ID_names=True)
+plot_hemoglobin_and_force_by_group(mean_training_changes_df, spatial_error_df, "Left Tx1 HHb", "Average Spatial Error", show_ID_names=True)
+plot_hemoglobin_and_force_by_group(mean_training_changes_df, spatial_error_df, "Right Tx4 HHb", "Average Spatial Error", show_ID_names=True)
 
 
 

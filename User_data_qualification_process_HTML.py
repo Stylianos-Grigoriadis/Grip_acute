@@ -14,7 +14,7 @@ from plotly.subplots import make_subplots
 # SETTINGS
 # =========================
 directory = Path(
-    r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Data to screen\White_5'
+    r'C:\Users\Administrator\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Data to screen\Pink_7'
 )
 
 ID = directory.name
@@ -23,11 +23,11 @@ artinis_file_name = "Artinis_" + ID[0] + ID.split("_")[1]
 grip_directory = directory / 'Grip data'
 
 participants_excel_path = Path(
-    r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Signals\Participants.xlsx'
+    r'C:\Users\Administrator\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Signals\Participants.xlsx'
 )
 
 number_of_training_sets = 10
-save_directory = Path(r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Figures\Reports')
+save_directory = Path(r'C:\Users\Administrator\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Figures\Reports')
 report_path = save_directory / f'{ID}_prequalification_report.html'
 
 force_color = 'blue'

@@ -2,10 +2,6 @@ import pandas as pd
 import numpy as np
 import lib
 import Lib_grip as lb
-import matplotlib.pyplot as plt
-import glob
-import os
-from pathlib import Path
 import os
 
 
@@ -23,6 +19,7 @@ low_pass_filter_frequency = 15
 sd_factor = 3
 time_window = 1
 asymptote_fraction = 0.95
+time_threshold = 3
 
 results = []
 list_ID = []
@@ -70,7 +67,6 @@ for folder in os.listdir(directory):
     synch_Isometric_high = lb.synchronization_of_Time_and_ClosestSampleTime_Anestis(Isometric_high)
     synch_Isometric_low = lb.synchronization_of_Time_and_ClosestSampleTime_Anestis(Isometric_low)
 
-    time_threshold = 3
     synch_Isometric_high_after_threshold = synch_Isometric_high[synch_Isometric_high['Time'] > time_threshold].reset_index(drop=True).copy()
     synch_Isometric_low_after_threshold = synch_Isometric_low[synch_Isometric_low['Time'] > time_threshold].reset_index(drop=True).copy()
     spatial_errors_synch_Isometric_high = lb.spatial_error(synch_Isometric_high_after_threshold)
@@ -178,6 +174,24 @@ for folder in os.listdir(directory):
             adaptation_asymp = np.nan
         participant_results[f"{condition} Adaptation Time SD {sd_factor}"] = adaptation_sd
         participant_results[f"{condition} Adaptation Time Asymptote"] = adaptation_asymp
+
+    # Custom median-based SD summary for each phase and perturbation direction
+    # 3 adaptations: median; 2 adaptations: slower (second-best);
+    # 1 adaptation: the only available time; 0 adaptations: NaN
+    for phase in ["Pre", "Post"]:
+        for direction in ["Down", "Up"]:
+            trial_times = [adaptation_results[f"{phase} {direction} {trial}"][0] for trial in [1, 2, 3]]
+            valid_times = sorted(float(time) for time in trial_times if time is not None and np.isfinite(time))
+
+            if len(valid_times) == 3:
+                median_time = float(np.median(valid_times))
+            elif len(valid_times) in [1, 2]:
+                median_time = valid_times[-1]
+            else:
+                median_time = np.nan
+
+            participant_results[f"Median {phase} {direction} Adaptation Time SD {sd_factor}"] = median_time
+            participant_results[f"Successful {phase} {direction} Trials SD {sd_factor}"] = len(valid_times)
 
     # Average - SD method
     participant_results[f"Average Pre Down Adaptation Time SD {sd_factor}"] = Average_Pre_Pert_down_time_to_adapt_sd

@@ -14,7 +14,7 @@ from plotly.subplots import make_subplots
 # SETTINGS
 # =========================
 directory = Path(
-    r'C:\Users\Administrator\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Data to screen\Pink_7'
+    r'C:\Users\Administrator\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Data to screen\Pink_8'
 )
 
 ID = directory.name
@@ -161,17 +161,21 @@ def create_perturbation_force_target_data_for_javascript(upward_perturbation_res
 
 def read_and_preprocess_perturbation_file(file_path, sampling_frequency, low_pass_filter_frequency):
     """
-    Reads one perturbation or isometric file, synchronizes it,
-    and low-pass filters the Performance column.
+    Reads a perturbation or isometric file, filters the raw
+    Performance signal, then synchronizes it with the Target.
     """
-    df = pd.read_csv(file_path, skiprows=2)
-    df = lb.synchronization_of_Time_and_ClosestSampleTime_Anestis(df)
 
+    df = pd.read_csv(file_path, skiprows=2)
+
+    # First filter the raw force signal
     df['Performance'] = lib.Butterworth(
         sampling_frequency,
         low_pass_filter_frequency,
         df['Performance'].to_numpy()
     )
+
+    # Then synchronize once
+    df = lb.synchronization_of_Time_and_ClosestSampleTime_Anestis(df)
 
     return df
 
@@ -291,11 +295,13 @@ def calculate_isometric_thresholds(isometric_high, isometric_low, time_threshold
 
 def analyze_perturbation_trial(df, sd_factor, time_window, name, mean_spatial_error_isometric_trials, sd_spatial_error_isometric_trials):
     """
-    Recreates the SD adaptation logic and returns everything needed for Plotly plotting.
+    Calculates adaptation time using the SD method.
+    Data must already be filtered and synchronized.
     """
-    df = df.copy()
-    df = lb.synchronization_of_Time_and_ClosestSampleTime_Anestis(df)
 
+    df = df.copy()
+
+    # Find the perturbation onset
     target_change_indices = df[df['Target'] != df['Target'].shift(1)].index.tolist()
 
     if len(target_change_indices) < 2:
@@ -303,8 +309,10 @@ def analyze_perturbation_trial(df, sd_factor, time_window, name, mean_spatial_er
     else:
         perturbation_index = target_change_indices[1]
 
+    # Calculate spatial error
     spatial_er = lb.spatial_error(df)
 
+    # Calculate threshold
     mean_isometric_trial = mean_spatial_error_isometric_trials
     sd_isometric_trial = sd_spatial_error_isometric_trials
     threshold = mean_isometric_trial + (sd_isometric_trial * sd_factor)
@@ -320,8 +328,11 @@ def analyze_perturbation_trial(df, sd_factor, time_window, name, mean_spatial_er
     last_pos = len(df) - 1
     last_index_of_iteration = last_pos - pos_idx
 
+    # Find the first qualifying adaptation window
     for i in range(len(spatial_er) - last_index_of_iteration):
+
         if i >= perturbation_index:
+
             start_time_window_position = i
             end_time_window = df['Time'].iloc[start_time_window_position] + time_window
 
@@ -338,14 +349,14 @@ def analyze_perturbation_trial(df, sd_factor, time_window, name, mean_spatial_er
 
             consecutive_values_list = np.arange(0, consecutive_values, 1)
 
-            if all(
-                spatial_er[i + j] < threshold
-                for j in consecutive_values_list
-            ):
+            if all(spatial_er[i + j] < threshold for j in consecutive_values_list):
+
                 time_of_adaptation_sd = df['Time'].iloc[i] - df['Time'].iloc[perturbation_index]
+
                 time_until_spatial_error_is_lower_than_threshold = (
                     df['Time'].iloc[end_time_window_position] - df['Time'].iloc[perturbation_index]
                 )
+
                 break
 
     return {
@@ -360,7 +371,6 @@ def analyze_perturbation_trial(df, sd_factor, time_window, name, mean_spatial_er
         'time_of_adaptation_sd': time_of_adaptation_sd,
         'time_until_spatial_error_is_lower_than_threshold': time_until_spatial_error_is_lower_than_threshold
     }
-
 
 def analyze_perturbation_group(trials, sd_factor, time_window, mean_spatial_error_isometric_trials, sd_spatial_error_isometric_trials, direction):
     """

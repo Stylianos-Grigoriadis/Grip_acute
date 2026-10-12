@@ -16,7 +16,7 @@ plt.rcParams['font.family'] = 'serif'        # e.g., 'serif', 'sans-serif', 'mon
 plt.rcParams['font.size'] = 16
 
 # Participants information
-ID = "Pink_7"
+ID = "White_8"
 name = "Artinis_" + ID[0] + ID.split("_")[1]
 
 

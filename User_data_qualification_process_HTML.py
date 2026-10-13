@@ -14,7 +14,7 @@ from plotly.subplots import make_subplots
 # SETTINGS
 # =========================
 directory = Path(
-    r'C:\Users\Administrator\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Data to screen\Pink_8'
+    r'C:\Users\Administrator\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Data to screen\Pink_9'
 )
 
 ID = directory.name

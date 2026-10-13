@@ -589,7 +589,7 @@ group_colors = {
 file_name = f"Perturbation_results_SD_factor_{sd_factor}_Asymptote_{asymptote_fraction}.xlsx"
 perturbation_results = pd.read_excel(os.path.join(results_directory, file_name))
 
-#
+
 # plot_perturbation_group_subplots(
 #     perturbation_results,
 #     summary=summary,
@@ -663,8 +663,8 @@ percentage_change_df = plot_perturbation_percentage_boxplots(
 )
 
 # Create and save the 11-column Excel for the selected summary
-# adaptation_summary_df = export_adaptation_results(
-#     perturbation_results, results_directory,
-#     sd_factor=sd_factor, method=method, summary=summary
-# )
+adaptation_summary_df = export_adaptation_results(
+    perturbation_results, results_directory,
+    sd_factor=sd_factor, method=method, summary=summary
+)
 

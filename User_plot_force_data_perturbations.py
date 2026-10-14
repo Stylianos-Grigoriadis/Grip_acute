@@ -663,8 +663,8 @@ percentage_change_df = plot_perturbation_percentage_boxplots(
 )
 
 # Create and save the 11-column Excel for the selected summary
-adaptation_summary_df = export_adaptation_results(
-    perturbation_results, results_directory,
-    sd_factor=sd_factor, method=method, summary=summary
-)
+# adaptation_summary_df = export_adaptation_results(
+#     perturbation_results, results_directory,
+#     sd_factor=sd_factor, method=method, summary=summary
+# )
 

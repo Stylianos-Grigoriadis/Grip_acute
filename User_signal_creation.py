@@ -46,8 +46,8 @@ print(f"The total duration of the set is {total_perturbation_trial_duration} sec
 base_percentage_onscreen = desired_average_onscreen
 base_part = np.full(1, base_percentage_onscreen)
 
-for i in range(1, 21):
-    folder_directory = r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training children\Data\Signals\Collection 2'
+for i in range(11, 16):
+    folder_directory = r'C:\Users\Administrator\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Signals'
     os.chdir(folder_directory)
 
     name_pink = f'Pink_{i}'
@@ -72,9 +72,9 @@ for i in range(1, 21):
         # sine_signal = lb.signal_interpolation(sine_signal, interpolation_factor)
 
 
-        # lb.create_txt_file(pink_signal, f'T{j}', folder_pink)
-        # lb.create_txt_file(white_signal, f'T{j}', folder_white)
-        # lb.create_txt_file(sine_signal, f'T{j}', folder_sine)
+        lb.create_txt_file(pink_signal, f'T{j}', folder_pink)
+        lb.create_txt_file(white_signal, f'T{j}', folder_white)
+        lb.create_txt_file(sine_signal, f'T{j}', folder_sine)
 
         # else:
         #

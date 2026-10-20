@@ -13,7 +13,7 @@ raw_data_directory = r'C:\Users\Administrator\OneDrive - Αριστοτέλει�
 
 directory = r'C:\Users\Administrator\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Data to screen'
 
-folder_to_move = ["Pink_9"]
+folder_to_move = ["Sine_10"]
 
 
 def get_file_datetime(filename):

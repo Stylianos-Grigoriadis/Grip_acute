@@ -590,71 +590,71 @@ file_name = f"Perturbation_results_SD_factor_{sd_factor}_Asymptote_{asymptote_fr
 perturbation_results = pd.read_excel(os.path.join(results_directory, file_name))
 
 
-# plot_perturbation_group_subplots(
-#     perturbation_results,
-#     summary=summary,
-#     method=method,
-#     direction="Down",
-#     group_colors=group_colors,
-#     show_datapoints=True,
-#     sd_factor=sd_factor,
-#     connect_participants=True,
-#     show_ID=True
-# )
-# plot_perturbation_group_subplots(
-#     perturbation_results,
-#     summary=summary,
-#     method=method,
-#     direction="Up",
-#     group_colors=group_colors,
-#     show_datapoints=True,
-#     sd_factor=sd_factor,
-#     connect_participants=True,
-#     show_ID=True
-# )
-#
-# plot_perturbation_boxplots(
-#     perturbation_results,
-#     summary=summary,
-#     method=method,
-#     direction="Down",
-#     group_colors=group_colors,
-#     show_datapoints=False,
-#     sd_factor=sd_factor,
-#     connect_participants=False,
-#     show_ID=False
-# )
-# plot_perturbation_boxplots(
-#     perturbation_results,
-#     summary=summary,
-#     method=method,
-#     direction="Up",
-#     group_colors=group_colors,
-#     show_datapoints=False,
-#     sd_factor=sd_factor,
-#     connect_participants=False,
-#     show_ID=False
-# )
-#
-#
-# plot_perturbation_difference_boxplots(
-#     perturbation_results,
-#     summary=summary,
-#     method=method,
-#     group_colors=group_colors,
-#     show_datapoints=False,
-#     sd_factor=sd_factor
-#
-# )
-#
-# plot_perturbation_percentage_boxplots(
-#     perturbation_results,
-#     summary=summary,
-#     method=method,
-#     group_colors=group_colors,
-#     sd_factor=sd_factor,
-#     show_datapoints=True
-# )
+plot_perturbation_group_subplots(
+    perturbation_results,
+    summary=summary,
+    method=method,
+    direction="Down",
+    group_colors=group_colors,
+    show_datapoints=True,
+    sd_factor=sd_factor,
+    connect_participants=True,
+    show_ID=True
+)
+plot_perturbation_group_subplots(
+    perturbation_results,
+    summary=summary,
+    method=method,
+    direction="Up",
+    group_colors=group_colors,
+    show_datapoints=True,
+    sd_factor=sd_factor,
+    connect_participants=True,
+    show_ID=True
+)
+
+plot_perturbation_boxplots(
+    perturbation_results,
+    summary=summary,
+    method=method,
+    direction="Down",
+    group_colors=group_colors,
+    show_datapoints=False,
+    sd_factor=sd_factor,
+    connect_participants=False,
+    show_ID=False
+)
+plot_perturbation_boxplots(
+    perturbation_results,
+    summary=summary,
+    method=method,
+    direction="Up",
+    group_colors=group_colors,
+    show_datapoints=False,
+    sd_factor=sd_factor,
+    connect_participants=False,
+    show_ID=False
+)
+
+
+plot_perturbation_difference_boxplots(
+    perturbation_results,
+    summary=summary,
+    method=method,
+    group_colors=group_colors,
+    show_datapoints=False,
+    sd_factor=sd_factor
+
+)
+
+plot_perturbation_percentage_boxplots(
+    perturbation_results,
+    summary=summary,
+    method=method,
+    group_colors=group_colors,
+    sd_factor=sd_factor,
+    show_datapoints=True
+)
 
 # Plot percentage improvement for the selected summary (Median by default)
 percentage_change_df = plot_perturbation_percentage_boxplots(

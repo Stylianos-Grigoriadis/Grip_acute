@@ -16,7 +16,7 @@ directory = r"C:\Users\Administrator\OneDrive - Αριστοτέλειο Παν�
 
 fs = 100
 low_pass_filter_frequency = 15
-sd_factor = 3
+sd_factor = 2
 time_window = 1
 asymptote_fraction = 0.95
 time_threshold = 3

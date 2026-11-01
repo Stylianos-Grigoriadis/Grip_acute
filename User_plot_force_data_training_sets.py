@@ -162,7 +162,7 @@ def plot_training_variable_boxplots(training_results, variable, group_colors, sh
 
 
 
-results_directory = r'C:\Users\Administrator\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Results'
+results_directory = r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Results'
 os.chdir(results_directory)
 training_results = pd.read_excel(r'Training_results.xlsx')
 print(training_results.columns)

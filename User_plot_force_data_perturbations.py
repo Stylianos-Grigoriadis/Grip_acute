@@ -571,7 +571,7 @@ def export_min_adaptation_results(perturbation_results, results_directory, sd_fa
 
 
 # Parameters
-results_directory = r"C:\Users\Administrator\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Results"
+results_directory = r"C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Results"
 
 sd_factor = 3
 asymptote_fraction = 0.95

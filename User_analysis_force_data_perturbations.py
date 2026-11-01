@@ -6,17 +6,18 @@ import os
 
 
 
-participants_directory = r'C:\Users\Administrator\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Signals'
+participants_directory = r'C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Signals'
 os.chdir(participants_directory)
 participants = pd.read_excel(r'Participants.xlsx')
 
 
+save_directory = r"C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Results"
 
-directory = r"C:\Users\Administrator\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Data to screen"
+directory = r"C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Data\Data to screen"
 
 fs = 100
 low_pass_filter_frequency = 15
-sd_factor = 2
+sd_factor = 3
 time_window = 1
 asymptote_fraction = 0.95
 time_threshold = 3
@@ -224,6 +225,5 @@ for folder in os.listdir(directory):
     ################################
 
 df_results = pd.DataFrame(results)
-save_directory = r"C:\Users\Administrator\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Results"
 save_name = f"Perturbation_results_SD_factor_{sd_factor}_Asymptote_{asymptote_fraction}.xlsx"
 df_results.to_excel(os.path.join(save_directory, save_name),index=False)

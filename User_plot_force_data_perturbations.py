@@ -571,7 +571,7 @@ def export_min_adaptation_results(perturbation_results, results_directory, sd_fa
 
 
 # Parameters
-results_directory = r"C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Results"
+results_directory = r"C:\Users\Administrator\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Results"
 
 sd_factor = 3
 asymptote_fraction = 0.95
@@ -619,10 +619,10 @@ plot_perturbation_boxplots(
     method=method,
     direction="Down",
     group_colors=group_colors,
-    show_datapoints=False,
+    show_datapoints=True,
     sd_factor=sd_factor,
-    connect_participants=False,
-    show_ID=False
+    connect_participants=True,
+    show_ID=True
 )
 plot_perturbation_boxplots(
     perturbation_results,
@@ -630,10 +630,10 @@ plot_perturbation_boxplots(
     method=method,
     direction="Up",
     group_colors=group_colors,
-    show_datapoints=False,
+    show_datapoints=True,
     sd_factor=sd_factor,
-    connect_participants=False,
-    show_ID=False
+    connect_participants=True,
+    show_ID=True
 )
 
 
@@ -642,18 +642,9 @@ plot_perturbation_difference_boxplots(
     summary=summary,
     method=method,
     group_colors=group_colors,
-    show_datapoints=False,
+    show_datapoints=True,
     sd_factor=sd_factor
 
-)
-
-plot_perturbation_percentage_boxplots(
-    perturbation_results,
-    summary=summary,
-    method=method,
-    group_colors=group_colors,
-    sd_factor=sd_factor,
-    show_datapoints=True
 )
 
 # Plot percentage improvement for the selected summary (Median by default)
@@ -663,8 +654,8 @@ percentage_change_df = plot_perturbation_percentage_boxplots(
 )
 
 # Create and save the 11-column Excel for the selected summary
-# adaptation_summary_df = export_adaptation_results(
-#     perturbation_results, results_directory,
-#     sd_factor=sd_factor, method=method, summary=summary
-# )
+adaptation_summary_df = export_adaptation_results(
+    perturbation_results, results_directory,
+    sd_factor=sd_factor, method=method, summary=summary
+)
 

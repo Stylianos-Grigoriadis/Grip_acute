@@ -861,7 +861,7 @@ def plot_perturbation_rainclouds(
 
 
 # Parameters
-results_directory = r"C:\Users\Stylianos\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Results"
+results_directory = r"C:\Users\Administrator\OneDrive - Αριστοτέλειο Πανεπιστήμιο Θεσσαλονίκης\My Files\PhD\Projects\Grip training older adults\Results"
 
 sd_factor = 3
 asymptote_fraction = 0.95
@@ -940,7 +940,7 @@ perturbation_results = pd.read_excel(os.path.join(results_directory, file_name))
 # Plot percentage improvement for the selected summary (Median by default)
 percentage_change_df = plot_perturbation_percentage_boxplots(
     perturbation_results, summary=summary, method=method,
-    group_colors=group_colors, sd_factor=sd_factor, show_datapoints=True, show_id=True
+    group_colors=group_colors, sd_factor=sd_factor, show_datapoints=True, show_id=False
 )
 
 fig, axes, raincloud_data = plot_perturbation_rainclouds(
@@ -958,8 +958,8 @@ fig, axes, raincloud_data = plot_perturbation_rainclouds(
 )
 
 # Create and save the 11-column Excel for the selected summary
-# adaptation_summary_df = export_adaptation_results(
-#     perturbation_results, results_directory,
-#     sd_factor=sd_factor, method=method, summary=summary
-# )
+adaptation_summary_df = export_adaptation_results(
+    perturbation_results, results_directory,
+    sd_factor=sd_factor, method=method, summary=summary
+)
 
